@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Onesh</string>
+    <string name="title_activity_main">Onesh</string>
+    <string name="package_name">app.onesh.android</string>
+    <string name="custom_url_scheme">app.onesh.android</string>
+</resources>

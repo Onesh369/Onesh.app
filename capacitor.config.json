@@ -1,0 +1,9 @@
+{
+  "appId": "app.onesh.android",
+  "appName": "Onesh",
+  "webDir": "dist",
+  "backgroundColor": "#efe6d6",
+  "android": {
+    "backgroundColor": "#efe6d6"
+  }
+}
