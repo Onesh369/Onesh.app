@@ -7,16 +7,20 @@ const MODES: { id: ThemeMode; label: string }[] = [
   { id: 'dark', label: 'Night' },
 ]
 
-export function ThemeToggle() {
-  const { themeMode, setThemeMode } = useStore()
-
+export function ThemeSwitch({
+  value,
+  onChange,
+}: {
+  value: ThemeMode
+  onChange: (mode: ThemeMode) => void
+}) {
   return (
     <div className="theme-switch" role="group" aria-label="Theme">
       {MODES.map((mode) => (
         <button
           key={mode.id}
-          className={`theme-btn ${themeMode === mode.id ? 'active' : ''}`}
-          onClick={() => setThemeMode(mode.id)}
+          className={`theme-btn ${value === mode.id ? 'active' : ''}`}
+          onClick={() => onChange(mode.id)}
           type="button"
         >
           {mode.label}
@@ -24,4 +28,9 @@ export function ThemeToggle() {
       ))}
     </div>
   )
+}
+
+export function ThemeToggle() {
+  const { themeMode, setThemeMode } = useStore()
+  return <ThemeSwitch value={themeMode} onChange={setThemeMode} />
 }

@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { AppData, Book, Habit, Task, ThemeMode } from './types'
 import { loadData, saveData, uid } from './lib/storage'
-import { getData, putData } from './lib/api'
+import { getData } from './lib/api'
+import { flushCloudSave, queueCloudSave } from './lib/sync'
 import { applyTheme } from './lib/theme'
 import { addDays, todayISO } from './lib/dates'
 import { normalizeTime, optionalText } from './lib/tasks'
@@ -56,7 +57,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         applyTheme(remote.themeMode)
       })
       .catch(() => {
-        if (!cancelled) applyTheme(data.themeMode)
+        if (!cancelled) applyTheme(loadData().themeMode)
       })
       .finally(() => {
         if (!cancelled) hydrated.current = true
@@ -68,13 +69,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hydrated.current) return
-    saveData(data)
     applyTheme(data.themeMode)
-    const timer = window.setTimeout(() => {
-      void putData(data).catch(() => undefined)
-    }, 450)
-    return () => window.clearTimeout(timer)
+    queueCloudSave(data)
   }, [data])
+
+  useEffect(() => {
+    const flush = () => {
+      void flushCloudSave()
+    }
+    const onHide = () => {
+      if (document.hidden) flush()
+    }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onHide)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onHide)
+    }
+  }, [])
 
   useEffect(() => {
     applyTheme(data.themeMode)

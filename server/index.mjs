@@ -189,12 +189,12 @@ app.post('/api/signup', async (c) => {
   return withLock(async () => {
     const users = await readUsers()
     if (users.some((user) => user.username.toLowerCase() === username.toLowerCase())) {
-      return c.json({ error: 'That username is taken.' }, 409)
+      return c.json({ error: 'That username is already taken. Try another.' }, 409)
     }
     const user = {
       id: crypto.randomUUID(),
       username,
-      passwordHash: await bcrypt.hash(password, 12),
+      passwordHash: await bcrypt.hash(password, 10),
       createdAt: new Date().toISOString(),
     }
     users.push(user)
@@ -214,7 +214,7 @@ app.post('/api/login', async (c) => {
   const users = await readUsers()
   const user = users.find((item) => item.username.toLowerCase() === username.toLowerCase())
   const ok = await bcrypt.compare(password, user?.passwordHash ?? dummyHash)
-  if (!user || !ok) return c.json({ error: 'Wrong username or password.' }, 401)
+  if (!user || !ok) return c.json({ error: 'That username or password does not match.' }, 401)
   setSession(c, signToken({ sub: user.id, username: user.username }, await secret()))
   return c.json({ id: user.id, username: user.username })
 })

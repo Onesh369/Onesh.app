@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getMe, login as apiLogin, logout as apiLogout, putData, signup as apiSignup, type AuthUser } from './lib/api'
 import { hasLocalContent, loadData, clearLocalData } from './lib/storage'
+import { markSessionExpired } from './lib/session'
+import { flushCloudSave } from './lib/sync'
 
 type Auth = {
   user: AuthUser | null
@@ -29,7 +31,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!cancelled) setLoading(false)
       })
 
-    const onExpired = () => setUser(null)
+    const onExpired = () => {
+      setUser((current) => {
+        if (current) markSessionExpired()
+        return null
+      })
+    }
     window.addEventListener('onesh-auth-expired', onExpired)
     return () => {
       cancelled = true
@@ -51,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
+    await flushCloudSave()
     await apiLogout().catch(() => undefined)
     clearLocalData()
     setUser(null)

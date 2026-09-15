@@ -14,21 +14,26 @@ export class AuthError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  })
+  let response: Response
+  try {
+    response = await fetch(path, {
+      ...init,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers ?? {}),
+      },
+    })
+  } catch {
+    throw new Error('Cannot reach Onesh. Check your connection and try again.')
+  }
   const body = (await response.json().catch(() => null)) as { error?: string } | T | null
   if (response.status === 401) {
     if (path !== '/api/me') window.dispatchEvent(new Event('onesh-auth-expired'))
-    throw new AuthError(isErrorBody(body) ? body.error : 'Sign in required.')
+    throw new AuthError(isErrorBody(body) && body.error ? body.error : 'Sign in required.')
   }
   if (!response.ok) {
-    throw new Error(isErrorBody(body) && body.error ? body.error : 'Something went wrong.')
+    throw new Error(isErrorBody(body) && body.error ? body.error : 'Something went wrong. Try again.')
   }
   return body as T
 }

@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { AuthProvider, useAuth } from './auth.tsx'
-import { AuthScreen } from './components/AuthScreen.tsx'
+import { AuthLayout, AuthScreen } from './components/AuthScreen.tsx'
 import { StoreProvider } from './store.tsx'
 import './index.css'
 
@@ -10,16 +10,20 @@ function Root() {
   const { user, loading } = useAuth()
   if (loading) {
     return (
-      <div className="app auth-app">
-        <div className="auth-card">
-          <div className="brand-mark">
-            <span className="brand-dot" />
-            Onesh 369
-          </div>
-          <h1>Opening.</h1>
-          <p>Checking your account…</p>
+      <AuthLayout>
+        <div className="auth-shell">
+          <aside className="auth-story">
+            <p className="kicker">Onesh 369</p>
+            <h1>Opening.</h1>
+            <p>Checking for a signed-in account…</p>
+          </aside>
+          <section className="auth-card auth-card-loading">
+            <div className="auth-skeleton" />
+            <div className="auth-skeleton short" />
+            <div className="auth-skeleton" />
+          </section>
         </div>
-      </div>
+      </AuthLayout>
     )
   }
   if (!user) return <AuthScreen />
