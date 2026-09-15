@@ -2,7 +2,7 @@ import { STORAGE_KEY, THEME_MODE_KEY } from '../constants'
 import type { AppData, Task, ThemeMode } from '../types'
 import { normalizeTime, optionalText } from './tasks'
 
-const empty: AppData = {
+export const emptyData: AppData = {
   habits: [],
   completions: {},
   tasks: [],
@@ -33,28 +33,39 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
+export function parseAppData(value: unknown): AppData {
+  if (!isRecord(value)) return { ...emptyData }
+  return {
+    habits: Array.isArray(value.habits) ? value.habits : [],
+    completions: isRecord(value.completions) ? (value.completions as AppData['completions']) : {},
+    tasks: Array.isArray(value.tasks) ? value.tasks.map(readTask).filter((task): task is Task => task !== null) : [],
+    books: Array.isArray(value.books) ? value.books : [],
+    themeMode:
+      value.themeMode === 'light' || value.themeMode === 'dark' || value.themeMode === 'auto'
+        ? value.themeMode
+        : 'auto',
+  }
+}
+
 export function loadData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) {
       const mode = (localStorage.getItem(THEME_MODE_KEY) as ThemeMode | null) ?? 'auto'
-      return { ...empty, themeMode: mode }
+      return { ...emptyData, themeMode: mode }
     }
-    const parsed = JSON.parse(raw) as unknown
-    if (!isRecord(parsed)) return empty
-    return {
-      habits: Array.isArray(parsed.habits) ? parsed.habits : [],
-      completions: isRecord(parsed.completions) ? (parsed.completions as AppData['completions']) : {},
-      tasks: Array.isArray(parsed.tasks) ? parsed.tasks.map(readTask).filter((task): task is Task => task !== null) : [],
-      books: Array.isArray(parsed.books) ? parsed.books : [],
-      themeMode:
-        parsed.themeMode === 'light' || parsed.themeMode === 'dark' || parsed.themeMode === 'auto'
-          ? parsed.themeMode
-          : 'auto',
-    }
+    return parseAppData(JSON.parse(raw))
   } catch {
-    return empty
+    return { ...emptyData }
   }
+}
+
+export function hasLocalContent(data: AppData = loadData()) {
+  return data.habits.length > 0 || data.tasks.length > 0 || data.books.length > 0
+}
+
+export function clearLocalData() {
+  localStorage.removeItem(STORAGE_KEY)
 }
 
 export function saveData(data: AppData) {

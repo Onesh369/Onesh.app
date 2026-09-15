@@ -3,6 +3,7 @@ dist
 android
 .git
 .vscode
+data
 *.apk
 *.aab
 *.keystore

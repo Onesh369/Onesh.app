@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AccountMenu } from './components/AccountMenu'
 import { HabitsPage } from './components/habits/HabitsPage'
 import { PlanPage } from './components/plan/PlanPage'
 import { ReadingPage } from './components/reading/ReadingPage'
@@ -48,6 +49,7 @@ export default function App() {
             </button>
           </nav>
           <ThemeToggle />
+          <AccountMenu />
         </div>
       </header>
 

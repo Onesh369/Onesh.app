@@ -1,12 +1,42 @@
+import { spawn, type ChildProcess } from 'node:child_process'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+
+const root = dirname(fileURLToPath(import.meta.url))
+
+function oneshApi(): Plugin {
+  let child: ChildProcess | undefined
+  return {
+    name: 'onesh-api',
+    configureServer() {
+      if (child || process.env.ONESH_NO_API) return
+      child = spawn(process.execPath, ['--watch', join(root, 'server/index.mjs')], {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          PORT: '8787',
+          DATA_DIR: join(root, 'data'),
+        },
+      })
+      child.on('exit', () => {
+        child = undefined
+      })
+    },
+  }
+}
 
 export default defineConfig({
   server: {
     host: true,
+    proxy: {
+      '/api': 'http://127.0.0.1:8787',
+    },
   },
   plugins: [
+    oneshApi(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -14,7 +44,7 @@ export default defineConfig({
       manifest: {
         name: 'Onesh',
         short_name: 'Onesh',
-        description: 'Habits, daily plan, and a reading shelf. Data stays on your device.',
+        description: 'Habits, daily plan, and a reading shelf. Sign in to sync across devices.',
         theme_color: '#efe6d6',
         background_color: '#efe6d6',
         display: 'standalone',
@@ -37,7 +67,12 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
+          {
+            urlPattern: /\/api\//,
+            handler: 'NetworkOnly',
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',

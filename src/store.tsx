@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { AppData, Book, Habit, Task, ThemeMode } from './types'
 import { loadData, saveData, uid } from './lib/storage'
+import { getData, putData } from './lib/api'
 import { applyTheme } from './lib/theme'
 import { addDays, todayISO } from './lib/dates'
 import { normalizeTime, optionalText } from './lib/tasks'
@@ -43,10 +44,36 @@ function habitStreak(dates: string[], today: string): number {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(() => loadData())
+  const hydrated = useRef(false)
 
   useEffect(() => {
+    let cancelled = false
+    getData()
+      .then((remote) => {
+        if (cancelled) return
+        setData(remote)
+        saveData(remote)
+        applyTheme(remote.themeMode)
+      })
+      .catch(() => {
+        if (!cancelled) applyTheme(data.themeMode)
+      })
+      .finally(() => {
+        if (!cancelled) hydrated.current = true
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated.current) return
     saveData(data)
     applyTheme(data.themeMode)
+    const timer = window.setTimeout(() => {
+      void putData(data).catch(() => undefined)
+    }, 450)
+    return () => window.clearTimeout(timer)
   }, [data])
 
   useEffect(() => {
