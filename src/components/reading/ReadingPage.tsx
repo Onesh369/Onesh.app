@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { FORMATS, STATUSES } from '../../constants'
-import { bookPercent, normalizeBook } from '../../lib/books'
-import { yearOf, todayISO } from '../../lib/dates'
+import { bookPercent } from '../../lib/books'
+import { todayISO } from '../../lib/dates'
+import { pagesForBookOnDate } from '../../lib/reading'
 import { useStore } from '../../store'
 import type { Book, BookStatus } from '../../types'
 import { BookDialog } from './BookDialog'
+import { ReadingStats } from './ReadingStats'
 
 function stars(rating: number): string {
   if (!rating) return '—'
@@ -20,209 +22,125 @@ function formatLabel(format: Book['format']): string {
 }
 
 export function ReadingPage() {
-  const { books, addBook, updateBook, deleteBook } = useStore()
+  const { books, readingLog, addBook, updateBook, deleteBook, logReading, finishBook } = useStore()
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Book | null>(null)
   const [filter, setFilter] = useState<'all' | BookStatus>('all')
+  const [query, setQuery] = useState('')
 
   const visible = useMemo(() => {
     const list = filter === 'all' ? books : books.filter((book) => book.status === filter)
+    const needle = query.trim().toLowerCase()
+    const matched = needle
+      ? list.filter(
+          (book) =>
+            book.title.toLowerCase().includes(needle) ||
+            book.author.toLowerCase().includes(needle) ||
+            book.genre.toLowerCase().includes(needle),
+        )
+      : list
     const rank = { reading: 0, stopped: 1, read: 2 }
-    return [...list].sort((a, b) => rank[a.status] - rank[b.status] || a.title.localeCompare(b.title))
-  }, [books, filter])
+    return [...matched].sort((a, b) => rank[a.status] - rank[b.status] || a.title.localeCompare(b.title))
+  }, [books, filter, query])
 
   const current = books.filter((book) => book.status === 'reading')
-  const thisYear = yearOf(todayISO())
-  const finishedYear = books.filter((book) => book.status === 'read' && book.dateFinish.startsWith(String(thisYear)))
-  const pagesYear = finishedYear.reduce((sum, book) => sum + book.pages, 0)
-  const rated = books.filter((book) => book.rating > 0)
-  const avgRating = rated.length
-    ? (rated.reduce((sum, book) => sum + book.rating, 0) / rated.length).toFixed(1)
-    : '—'
 
   return (
     <div>
-      <div className="stat-grid four" style={{ marginBottom: 22 }}>
-        <div className="stat">
-          <b>{current.length}</b>
-          <span>currently reading</span>
-        </div>
-        <div className="stat">
-          <b>{finishedYear.length}</b>
-          <span>finished {thisYear}</span>
-        </div>
-        <div className="stat">
-          <b>{pagesYear}</b>
-          <span>pages this year</span>
-        </div>
-        <div className="stat">
-          <b>{avgRating}</b>
-          <span>avg rating</span>
-        </div>
-      </div>
-
       {current.length > 0 ? (
         <section className="reading-hero">
-          {current.map((book) => {
-            const percent = bookPercent(book)
-            return (
-              <article key={book.id} className="now-card">
-                <div className="kicker">In progress</div>
-                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 28, margin: '6px 0 4px' }}>{book.title}</h2>
-                <div className="meta">
-                  {book.author || 'Unknown author'}
-                  {book.genre ? ` · ${book.genre}` : ''}
-                </div>
-                <div className="progress" aria-label={`${percent}%`}>
-                  <span style={{ width: `${percent}%` }} />
-                </div>
-                <div className="meta">
-                  {book.pagesRead} / {book.pages || '—'} pages · {percent}%
-                </div>
-                <div className="row-actions" style={{ marginTop: 12 }}>
-                  {[10, 20, 50].map((step) => (
-                    <button
-                      key={step}
-                      className="tiny"
-                      type="button"
-                      onClick={() => {
-                        const { id, createdAt: _createdAt, ...rest } = book
-                        updateBook(id, normalizeBook({ ...rest, pagesRead: rest.pagesRead + step }))
-                      }}
-                    >
-                      +{step} pages
-                    </button>
-                  ))}
-                  <button className="tiny" type="button" onClick={() => setEditing(book)}>
-                    Edit
-                  </button>
-                </div>
-              </article>
-            )
-          })}
+          {current.map((book) => (
+            <NowReadingCard
+              key={book.id}
+              book={book}
+              todayPages={pagesForBookOnDate(readingLog, book.id, todayISO())}
+              onOpen={() => setEditing(book)}
+              onLog={(toPage) => logReading(book.id, toPage)}
+              onFinish={() => finishBook(book.id)}
+            />
+          ))}
         </section>
       ) : null}
 
-      <section className="panel">
-        <div className="toolbar">
-          <div>
-            <div className="kicker">Library</div>
-            <h2>Books</h2>
-          </div>
-          <div className="filters">
-            {(['all', 'reading', 'read', 'stopped'] as const).map((item) => (
-              <button
-                key={item}
-                type="button"
-                className={`chip ${filter === item ? 'active' : ''}`}
-                onClick={() => setFilter(item)}
-              >
-                {item === 'all' ? 'All' : statusLabel(item)}
-              </button>
-            ))}
-            <button className="primary" type="button" onClick={() => setCreating(true)}>
-              Add book
-            </button>
-          </div>
-        </div>
-
-        {visible.length === 0 ? (
-          <div className="empty">
-            <h3>Your shelf is empty</h3>
-            <p>Add a title, page count, and start date. Progress and percentage fill in as you read.</p>
-            <button className="primary" type="button" onClick={() => setCreating(true)}>
-              Add a book
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="table-wrap table-desktop">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Book name</th>
-                    <th>Author</th>
-                    <th>Year</th>
-                    <th>Pages</th>
-                    <th>Pages read</th>
-                    <th>%</th>
-                    <th>Progress</th>
-                    <th>Rating</th>
-                    <th>Start</th>
-                    <th>Finish</th>
-                    <th>Format</th>
-                    <th>Genre</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visible.map((book) => {
-                    const percent = bookPercent(book)
-                    return (
-                      <tr key={book.id}>
-                        <td className="book-title">{book.title}</td>
-                        <td>{book.author || '—'}</td>
-                        <td>{book.year || '—'}</td>
-                        <td>{book.pages || '—'}</td>
-                        <td>{book.pagesRead || 0}</td>
-                        <td>{percent}%</td>
-                        <td style={{ minWidth: 90 }}>
-                          <div className="progress">
-                            <span style={{ width: `${percent}%` }} />
-                          </div>
-                        </td>
-                        <td className="stars">{stars(book.rating)}</td>
-                        <td>{book.dateStart || '—'}</td>
-                        <td>{book.dateFinish || '—'}</td>
-                        <td>
-                          <span className="format">{formatLabel(book.format)}</span>
-                        </td>
-                        <td>{book.genre}</td>
-                        <td>
-                          <span className={`status ${book.status}`}>{statusLabel(book.status)}</span>
-                        </td>
-                        <td>
-                          <button className="tiny" type="button" onClick={() => setEditing(book)}>
-                            Edit
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+      <div className="layout reading-layout">
+        <section className="panel">
+          <div className="toolbar">
+            <div>
+              <div className="kicker">Library</div>
+              <h2>Books</h2>
             </div>
+            <div className="filters">
+              <input
+                className="search"
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search title or author"
+                aria-label="Search books"
+              />
+              {(['all', 'reading', 'read', 'stopped'] as const).map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={`chip ${filter === item ? 'active' : ''}`}
+                  onClick={() => setFilter(item)}
+                >
+                  {item === 'all' ? 'All' : statusLabel(item)}
+                </button>
+              ))}
+              <button className="primary" type="button" onClick={() => setCreating(true)}>
+                Add book
+              </button>
+            </div>
+          </div>
 
-            <div className="cards-mobile">
+          {books.length === 0 ? (
+            <div className="empty">
+              <h3>Your shelf is empty</h3>
+              <p>Add a title, page count, and start date. Progress and percentage fill in as you read.</p>
+              <button className="primary" type="button" onClick={() => setCreating(true)}>
+                Add a book
+              </button>
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="empty compact">
+              <h3>Nothing matches</h3>
+              <p>Try another filter, or clear the search.</p>
+            </div>
+          ) : (
+            <div className="shelf">
               {visible.map((book) => {
                 const percent = bookPercent(book)
                 return (
-                  <article key={book.id} className="book-card">
-                    <div className="kicker">{statusLabel(book.status)}</div>
+                  <article key={book.id} className="book-card tap" onClick={() => setEditing(book)}>
+                    <div className="book-card-top">
+                      <span className={`status ${book.status}`}>{statusLabel(book.status)}</span>
+                      <span className="format">{formatLabel(book.format)}</span>
+                    </div>
                     <h3>{book.title}</h3>
                     <div className="meta">
-                      {book.author || 'Unknown'} · {book.year || 'n.d.'} · {book.genre}
+                      {book.author || 'Unknown'}
+                      {book.year ? ` · ${book.year}` : ''}
+                      {book.genre ? ` · ${book.genre}` : ''}
                     </div>
                     <div className="progress">
                       <span style={{ width: `${percent}%` }} />
                     </div>
-                    <div className="meta">
-                      {book.pagesRead}/{book.pages || '—'} · {percent}% · {formatLabel(book.format)}
+                    <div className="book-card-foot">
+                      <span className="meta">
+                        {book.pagesRead}/{book.pages || '—'} · {percent}%
+                      </span>
+                      <span className="stars">{stars(book.rating)}</span>
                     </div>
-                    <div className="meta" style={{ marginTop: 6 }}>
-                      {stars(book.rating)} · {book.dateStart || 'no start'} → {book.dateFinish || '—'}
-                    </div>
-                    <button className="tiny" type="button" onClick={() => setEditing(book)} style={{ marginTop: 10 }}>
-                      Edit
-                    </button>
                   </article>
                 )
               })}
             </div>
-          </>
-        )}
-      </section>
+          )}
+        </section>
+
+        <ReadingStats />
+      </div>
 
       {creating ? (
         <BookDialog
@@ -249,5 +167,87 @@ export function ReadingPage() {
         />
       ) : null}
     </div>
+  )
+}
+
+type NowProps = {
+
+  book: Book
+  todayPages: number
+  onOpen: () => void
+  onLog: (toPage: number) => void
+  onFinish: () => void
+}
+
+function NowReadingCard({ book, todayPages, onOpen, onLog, onFinish }: NowProps) {
+  const [pageInput, setPageInput] = useState('')
+  const percent = bookPercent(book)
+  const pagesLeft = book.pages > 0 ? Math.max(0, book.pages - book.pagesRead) : null
+
+  const submitPage = () => {
+    const value = Number(pageInput)
+    if (!pageInput.trim() || Number.isNaN(value)) return
+    onLog(value)
+    setPageInput('')
+  }
+
+  const stop = (event: { stopPropagation: () => void }) => event.stopPropagation()
+
+  return (
+    <article className="now-card tap" onClick={onOpen}>
+      <div className="now-card-head">
+        <div className="kicker">Currently reading</div>
+        {todayPages > 0 ? <span className="today-pill">+{todayPages} today</span> : null}
+      </div>
+      <h2 className="now-title">{book.title}</h2>
+      <div className="meta">
+        {book.author || 'Unknown author'}
+        {book.genre ? ` · ${book.genre}` : ''}
+      </div>
+      <div className="progress" aria-label={`${percent}%`}>
+        <span style={{ width: `${percent}%` }} />
+      </div>
+      <div className="now-meta">
+        <span>
+          <b>{book.pagesRead}</b> / {book.pages || '—'} pages
+        </span>
+        <span className="now-percent">{percent}%</span>
+        {pagesLeft != null ? <span className="meta">{pagesLeft} left</span> : null}
+      </div>
+
+      <div className="page-logger" onClick={stop}>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={book.pages || undefined}
+          value={pageInput}
+          onChange={(event) => setPageInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              submitPage()
+            }
+          }}
+          placeholder={`On page… (was ${book.pagesRead})`}
+          aria-label="Current page reached"
+        />
+        <button className="primary page-save" type="button" onClick={submitPage} disabled={!pageInput.trim()}>
+          Save page
+        </button>
+      </div>
+
+      <div className="row-actions now-actions" onClick={stop}>
+        <span className="quick-label">Quick add</span>
+        {[10, 20, 50].map((step) => (
+          <button key={step} className="tiny" type="button" onClick={() => onLog(book.pagesRead + step)}>
+            +{step}
+          </button>
+        ))}
+        <button className="tiny finish" type="button" onClick={onFinish}>
+          Finish
+        </button>
+      </div>
+    </article>
   )
 }

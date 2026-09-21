@@ -10,4 +10,6 @@ export function applyTheme(mode: ThemeMode) {
   const resolved = resolveTheme(mode)
   document.documentElement.dataset.theme = resolved
   document.documentElement.dataset.themeMode = mode
+  const color = resolved === 'dark' ? '#0b1220' : '#f6f7f9'
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color)
 }

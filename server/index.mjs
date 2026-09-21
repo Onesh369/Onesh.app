@@ -27,6 +27,7 @@ const emptyData = {
   completions: {},
   tasks: [],
   books: [],
+  readingLog: [],
   themeMode: 'auto',
 }
 
@@ -120,13 +121,32 @@ function isRecord(value) {
   return typeof value === 'object' && value !== null
 }
 
+function sanitizeReadingEntry(value) {
+  if (!isRecord(value) || typeof value.id !== 'string' || typeof value.bookId !== 'string' || typeof value.date !== 'string') {
+    return null
+  }
+  const toNum = (input) => Math.max(0, Math.round(Number(input) || 0))
+  return {
+    id: value.id,
+    bookId: value.bookId,
+    date: value.date,
+    pages: toNum(value.pages),
+    fromPage: toNum(value.fromPage),
+    toPage: toNum(value.toPage),
+    createdAt: typeof value.createdAt === 'string' ? value.createdAt : new Date().toISOString(),
+  }
+}
+
 function sanitizeData(value) {
-  if (!isRecord(value)) return emptyData
+  if (!isRecord(value)) return { ...emptyData }
   return {
     habits: Array.isArray(value.habits) ? value.habits : [],
     completions: isRecord(value.completions) ? value.completions : {},
     tasks: Array.isArray(value.tasks) ? value.tasks : [],
     books: Array.isArray(value.books) ? value.books : [],
+    readingLog: Array.isArray(value.readingLog)
+      ? value.readingLog.map(sanitizeReadingEntry).filter((entry) => entry !== null)
+      : [],
     themeMode:
       value.themeMode === 'light' || value.themeMode === 'dark' || value.themeMode === 'auto'
         ? value.themeMode

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { AppData, Book, Habit, Task, ThemeMode } from './types'
+import type { AppData, Book, Habit, ReadingEntry, Task, ThemeMode } from './types'
 import { loadData, saveData, uid } from './lib/storage'
+import { normalizeBook } from './lib/books'
 import { getData } from './lib/api'
 import { flushCloudSave, queueCloudSave } from './lib/sync'
 import { applyTheme } from './lib/theme'
@@ -11,6 +12,7 @@ type Store = AppData & {
   addHabit: (input: Pick<Habit, 'name' | 'color' | 'icon'>) => void
   updateHabit: (id: string, patch: Partial<Pick<Habit, 'name' | 'color' | 'icon'>>) => void
   deleteHabit: (id: string) => void
+  reorderHabits: (orderedIds: string[]) => void
   toggleHabit: (habitId: string, date: string) => void
   isDone: (habitId: string, date: string) => boolean
   streak: (habitId: string) => number
@@ -26,10 +28,54 @@ type Store = AppData & {
   addBook: (input: Omit<Book, 'id' | 'createdAt'>) => void
   updateBook: (id: string, patch: Partial<Omit<Book, 'id' | 'createdAt'>>) => void
   deleteBook: (id: string) => void
+  logReading: (bookId: string, toPage: number) => void
+  finishBook: (bookId: string) => void
   setThemeMode: (mode: ThemeMode) => void
 }
 
 const StoreContext = createContext<Store | null>(null)
+
+/**
+ * Sets a book's current page to `toPage`, normalizes the book, and records the
+ * page delta in the reading log against `today`. Same-day edits merge into a
+ * single entry so a day never counts pages twice; corrections shrink it.
+ */
+function applyReadingProgress(prev: AppData, bookId: string, toPage: number, today: string): AppData {
+  const book = prev.books.find((item) => item.id === bookId)
+  if (!book) return prev
+  const oldRead = book.pagesRead
+  const { id: _id, createdAt: _createdAt, ...rest } = book
+  const normalized = normalizeBook({ ...rest, pagesRead: Math.max(0, Math.round(toPage)) })
+  const newRead = normalized.pagesRead
+  const delta = newRead - oldRead
+  const books = prev.books.map((item) => (item.id === bookId ? { ...item, ...normalized } : item))
+  if (delta === 0) return { ...prev, books }
+
+  let readingLog = prev.readingLog
+  const index = readingLog.findIndex((entry) => entry.bookId === bookId && entry.date === today)
+  if (index >= 0) {
+    const nextPages = readingLog[index].pages + delta
+    if (nextPages > 0) {
+      readingLog = readingLog.map((entry, i) =>
+        i === index ? { ...entry, pages: nextPages, toPage: newRead } : entry,
+      )
+    } else {
+      readingLog = readingLog.filter((_, i) => i !== index)
+    }
+  } else if (delta > 0) {
+    const entry: ReadingEntry = {
+      id: uid(),
+      bookId,
+      date: today,
+      pages: delta,
+      fromPage: oldRead,
+      toPage: newRead,
+      createdAt: new Date().toISOString(),
+    }
+    readingLog = [...readingLog, entry]
+  }
+  return { ...prev, books, readingLog }
+}
 
 function habitStreak(dates: string[], today: string): number {
   const set = new Set(dates)
@@ -101,12 +147,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return {
       ...data,
       addHabit: (input) => {
-        const habit: Habit = {
-          id: uid(),
-          createdAt: new Date().toISOString(),
-          ...input,
-        }
-        setData((prev) => ({ ...prev, habits: [...prev.habits, habit] }))
+        setData((prev) => {
+          const habit: Habit = {
+            id: uid(),
+            createdAt: new Date().toISOString(),
+            order: prev.habits.reduce((max, item) => Math.max(max, item.order), 0) + 1,
+            ...input,
+          }
+          return { ...prev, habits: [...prev.habits, habit] }
+        })
       },
       updateHabit: (id, patch) => {
         setData((prev) => ({
@@ -124,6 +173,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             completions,
           }
         })
+      },
+      reorderHabits: (orderedIds) => {
+        const orderById = new Map(orderedIds.map((id, index) => [id, index + 1]))
+        setData((prev) => ({
+          ...prev,
+          habits: prev.habits.map((habit) =>
+            orderById.has(habit.id) ? { ...habit, order: orderById.get(habit.id) as number } : habit,
+          ),
+        }))
       },
       toggleHabit: (habitId, date) => {
         setData((prev) => {
@@ -277,7 +335,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setData((prev) => ({
           ...prev,
           books: prev.books.filter((book) => book.id !== id),
+          readingLog: prev.readingLog.filter((entry) => entry.bookId !== id),
         }))
+      },
+      logReading: (bookId, toPage) => {
+        setData((prev) => applyReadingProgress(prev, bookId, toPage, todayISO()))
+      },
+      finishBook: (bookId) => {
+        setData((prev) => {
+          const book = prev.books.find((item) => item.id === bookId)
+          if (!book) return prev
+          if (book.pages > 0) {
+            return applyReadingProgress(prev, bookId, book.pages, todayISO())
+          }
+          const dateFinish = book.dateFinish || todayISO()
+          return {
+            ...prev,
+            books: prev.books.map((item) =>
+              item.id === bookId ? { ...item, status: 'read', dateFinish } : item,
+            ),
+          }
+        })
       },
       setThemeMode: (themeMode) => {
         setData((prev) => ({ ...prev, themeMode }))

@@ -1,5 +1,5 @@
-import { LAST_USERNAME_KEY, THEME_MODE_KEY } from '../constants'
-import type { ThemeMode } from '../types'
+import { LAST_PAGE_KEY, LAST_USERNAME_KEY, THEME_MODE_KEY } from '../constants'
+import type { Page, ThemeMode } from '../types'
 import { applyTheme } from '../lib/theme'
 
 export function readGuestTheme(): ThemeMode {
@@ -28,4 +28,21 @@ export function takeSessionExpired() {
 
 export function markSessionExpired() {
   sessionStorage.setItem('onesh-session-expired', '1')
+}
+
+export function readLastPage(): Page {
+  try {
+    const value = localStorage.getItem(LAST_PAGE_KEY)
+    return value === 'plan' || value === 'reading' || value === 'habits' ? value : 'habits'
+  } catch {
+    return 'habits'
+  }
+}
+
+export function writeLastPage(page: Page) {
+  try {
+    localStorage.setItem(LAST_PAGE_KEY, page)
+  } catch {
+    /* ignore quota / private mode */
+  }
 }

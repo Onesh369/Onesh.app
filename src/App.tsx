@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AccountMenu } from './components/AccountMenu'
 import { HabitsPage } from './components/habits/HabitsPage'
 import { PlanPage } from './components/plan/PlanPage'
 import { ReadingPage } from './components/reading/ReadingPage'
 import { ThemeToggle } from './components/ThemeToggle'
+import { readLastPage, writeLastPage } from './lib/session'
 import type { Page } from './types'
 
 const COPY: Record<Page, { title: string; text: string }> = {
@@ -12,7 +13,7 @@ const COPY: Record<Page, { title: string; text: string }> = {
     text: 'One tap a day. Calendar, streaks, and a quiet pulse of your week, month, and year.',
   },
   plan: {
-    title: 'Plan.',
+    title: 'To-Do List.',
     text: 'A daily list. Check off what is done. Send the rest to tomorrow.',
   },
   reading: {
@@ -21,39 +22,109 @@ const COPY: Record<Page, { title: string; text: string }> = {
   },
 }
 
+const PAGES: { id: Page; label: string }[] = [
+  { id: 'habits', label: 'Habits' },
+  { id: 'plan', label: 'To-Do' },
+  { id: 'reading', label: 'Reading' },
+]
+
 export default function App() {
-  const [page, setPage] = useState<Page>('habits')
+  const [page, setPage] = useState<Page>(() => readLastPage())
   const copy = COPY[page]
+
+  const go = (next: Page) => {
+    setPage(next)
+    writeLastPage(next)
+  }
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [page])
 
   return (
     <div className="app">
       <header className="masthead">
-        <div className="brand">
+        <div className="mast-top">
           <div className="brand-mark">
             <span className="brand-dot" />
             Onesh 369
           </div>
-          <h1>{copy.title}</h1>
-          <p>{copy.text}</p>
+          <div className="mast-actions">
+            <nav className="nav nav-desktop" aria-label="Main">
+              {PAGES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={page === item.id ? 'active' : ''}
+                  aria-current={page === item.id ? 'page' : undefined}
+                  onClick={() => go(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+            <ThemeToggle />
+            <AccountMenu />
+          </div>
         </div>
-        <div className="mast-actions">
-          <nav className="nav" aria-label="Main">
-            <button type="button" className={page === 'habits' ? 'active' : ''} onClick={() => setPage('habits')}>
-              Habits
-            </button>
-            <button type="button" className={page === 'plan' ? 'active' : ''} onClick={() => setPage('plan')}>
-              Plan
-            </button>
-            <button type="button" className={page === 'reading' ? 'active' : ''} onClick={() => setPage('reading')}>
-              Reading
-            </button>
-          </nav>
-          <ThemeToggle />
-          <AccountMenu />
+        <div className="brand">
+          <h1>{copy.title}</h1>
+          <p className="brand-lead">{copy.text}</p>
         </div>
       </header>
 
-      {page === 'habits' ? <HabitsPage /> : page === 'plan' ? <PlanPage /> : <ReadingPage />}
+      <main className="page-in" key={page}>
+        {page === 'habits' ? <HabitsPage /> : page === 'plan' ? <PlanPage /> : <ReadingPage />}
+      </main>
+
+      <nav className="tab-bar" aria-label="Pages">
+        {PAGES.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={page === item.id ? 'active' : ''}
+            aria-current={page === item.id ? 'page' : undefined}
+            onClick={() => go(item.id)}
+          >
+            <TabIcon page={item.id} />
+            {item.label}
+          </button>
+        ))}
+      </nav>
     </div>
+  )
+}
+
+function TabIcon({ page }: { page: Page }) {
+  const common = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+  if (page === 'habits') {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M8.2 12.2 10.8 14.8 16 9.4" />
+      </svg>
+    )
+  }
+  if (page === 'plan') {
+    return (
+      <svg {...common}>
+        <rect x="4.5" y="3.5" width="15" height="17" rx="2.5" />
+        <path d="M8 8.5h8M8 12.5h8M8 16.5h5" />
+      </svg>
+    )
+  }
+  return (
+    <svg {...common}>
+      <path d="M4 19.2A2.2 2.2 0 0 1 6.2 17H20" />
+      <path d="M6.2 3.5H20V20.5H6.2A2.2 2.2 0 0 1 4 18.3V5.7A2.2 2.2 0 0 1 6.2 3.5z" />
+    </svg>
   )
 }

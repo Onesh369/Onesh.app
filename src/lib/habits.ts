@@ -1,6 +1,12 @@
 import type { Habit } from '../types'
 import { addDays, eachDay, lastNDays, monthOf, startOfMonth, yearDays, yearOf } from './dates'
 
+export function sortHabits(habits: Habit[]): Habit[] {
+  return [...habits].sort(
+    (a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
+  )
+}
+
 export function rateForDay(
   habits: Habit[],
   completions: Record<string, string[]>,

@@ -11,8 +11,13 @@ export function Dialog({ title, children, onClose }: Props) {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
     }
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = previous
+      window.removeEventListener('keydown', onKey)
+    }
   }, [onClose])
 
   return (

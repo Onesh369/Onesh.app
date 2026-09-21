@@ -27,7 +27,6 @@ export function PlanPage() {
   const [draft, setDraft] = useState('')
   const [must, setMust] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [freshId, setFreshId] = useState<string | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const pendingSave = useRef<(() => Details) | null>(null)
@@ -47,7 +46,6 @@ export function PlanPage() {
 
   const closeDetails = () => {
     setEditingId(null)
-    setFreshId(null)
     window.setTimeout(() => inputRef.current?.focus(), 0)
   }
 
@@ -57,17 +55,13 @@ export function PlanPage() {
     if (editingId && pendingSave.current) {
       updateTask(editingId, pendingSave.current())
     }
-    const id = addTask({
+    addTask({
       title,
       date: selected,
       important: must,
     })
     setDraft('')
     setMust(false)
-    if (id) {
-      setFreshId(id)
-      setEditingId(id)
-    }
   }
 
   const dropOn = (targetId: string) => {
@@ -90,14 +84,10 @@ export function PlanPage() {
       canComplete={canComplete}
       nextLabel={isToday(selected) ? 'Tomorrow' : formatShort(nextDate)}
       editing={editingId === task.id}
-      fresh={freshId === task.id}
       dragging={draggingId === task.id}
       draggable={draggable}
       onToggle={() => toggleTask(task.id)}
-      onEdit={() => {
-        setFreshId(null)
-        setEditingId(task.id)
-      }}
+      onEdit={() => setEditingId(task.id)}
       onRegisterSave={(save) => {
         pendingSave.current = save
       }}
@@ -127,7 +117,11 @@ export function PlanPage() {
             <button className="icon-btn" type="button" onClick={() => setSelected(addDays(selected, -1))} aria-label="Previous day">
               ‹
             </button>
-            <button className="ghost" type="button" onClick={() => setSelected(today)}>
+            <button
+              className={`ghost ${isToday(selected) ? '' : 'today-jump'}`}
+              type="button"
+              onClick={() => setSelected(today)}
+            >
               Today
             </button>
             <button className="icon-btn" type="button" onClick={() => setSelected(addDays(selected, 1))} aria-label="Next day">
@@ -189,7 +183,7 @@ export function PlanPage() {
         {dayTasks.length === 0 ? (
           <div className="empty">
             <h3>Write the few things that matter</h3>
-            <p>Write the task first. After Add, you can give it a time, a place, or a note — only if you need them.</p>
+            <p>Add the task. Tap it later if you want a time, a place, or a note.</p>
           </div>
         ) : (
           <div className="plan-list">
@@ -268,7 +262,7 @@ export function PlanPage() {
           })}
         </div>
         <p className="plan-hint">
-          Time, place, and notes stay optional. They open after you add the task.
+          Time, place, and notes stay optional. Tap a task to add them.
         </p>
       </aside>
     </div>
@@ -286,7 +280,6 @@ type RowProps = {
   canComplete: boolean
   nextLabel: string
   editing: boolean
-  fresh: boolean
   dragging: boolean
   draggable: boolean
   onToggle: () => void
@@ -307,7 +300,6 @@ function TaskRow({
   canComplete,
   nextLabel,
   editing,
-  fresh,
   dragging,
   draggable,
   onToggle,
@@ -323,12 +315,14 @@ function TaskRow({
   onDrop,
 }: RowProps) {
   const [details, setDetails] = useState<Details>(toDetails(task))
+  const [sure, setSure] = useState(false)
   const timeRef = useRef<HTMLInputElement>(null)
   const carry = rolledLabel(task)
   const hasDetails = Boolean(task.time || task.place || task.description)
 
   useEffect(() => {
     setDetails(toDetails(task))
+    setSure(false)
   }, [task, editing])
 
   useEffect(() => {
@@ -336,10 +330,6 @@ function TaskRow({
     onRegisterSave(() => details)
     return () => onRegisterSave(null)
   }, [editing, details, onRegisterSave])
-
-  useEffect(() => {
-    if (editing && fresh) timeRef.current?.focus()
-  }, [editing, fresh])
 
   return (
     <article
@@ -380,28 +370,25 @@ function TaskRow({
         {editing ? (
           <div className="task-editor" onKeyDown={(event) => event.key === 'Escape' && onCancelEdit()}>
             <div className="task-editor-head">
-              <div className="kicker">{fresh ? 'Optional' : 'Edit'}</div>
-              <h3>{fresh ? task.title : 'Task details'}</h3>
-              {fresh ? <p>Add a time, a place, or a note only if you need them.</p> : null}
+              <div className="kicker">Edit</div>
+              <h3>Task details</h3>
             </div>
-            {fresh ? null : (
-              <label className="task-field wide">
-                <span>Task</span>
-                <input
-                  className="task-edit"
-                  value={details.title}
-                  autoFocus
-                  onChange={(event) => setDetails((current) => ({ ...current, title: event.target.value }))}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault()
-                      if (details.title.trim()) onSave(details)
-                    }
-                    if (event.key === 'Escape') onCancelEdit()
-                  }}
-                />
-              </label>
-            )}
+            <label className="task-field wide">
+              <span>Task</span>
+              <input
+                className="task-edit"
+                value={details.title}
+                autoFocus
+                onChange={(event) => setDetails((current) => ({ ...current, title: event.target.value }))}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    if (details.title.trim()) onSave(details)
+                  }
+                  if (event.key === 'Escape') onCancelEdit()
+                }}
+              />
+            </label>
             <div className="task-fields">
               <label className="task-field">
                 <span>Time</span>
@@ -433,10 +420,10 @@ function TaskRow({
             </div>
             <div className="task-editor-actions">
               <button className="ghost" type="button" onClick={onCancelEdit}>
-                {fresh ? 'Skip' : 'Cancel'}
+                Cancel
               </button>
               <button className="primary" type="button" onClick={() => details.title.trim() && onSave(details)}>
-                {fresh ? 'Done' : 'Save'}
+                Save
               </button>
             </div>
           </div>
@@ -473,8 +460,15 @@ function TaskRow({
             </button>
           </>
         ) : null}
-        <button className="tiny" type="button" onClick={onDelete}>
-          Delete
+        <button
+          className={`tiny ${sure ? 'on' : ''}`}
+          type="button"
+          onClick={() => {
+            if (sure) onDelete()
+            else setSure(true)
+          }}
+        >
+          {sure ? 'Sure?' : 'Delete'}
         </button>
       </div>
       ) : null}

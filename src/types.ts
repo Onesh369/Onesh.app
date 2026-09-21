@@ -5,6 +5,7 @@ export type Habit = {
   name: string
   color: string
   icon: string
+  order: number
   createdAt: string
 }
 
@@ -27,6 +28,16 @@ export type Book = {
   createdAt: string
 }
 
+export type ReadingEntry = {
+  id: string
+  bookId: string
+  date: string
+  pages: number
+  fromPage: number
+  toPage: number
+  createdAt: string
+}
+
 export type Task = {
   id: string
   title: string
@@ -46,6 +57,7 @@ export type AppData = {
   completions: Record<string, string[]>
   tasks: Task[]
   books: Book[]
+  readingLog: ReadingEntry[]
   themeMode: ThemeMode
 }
 

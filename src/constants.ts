@@ -1,14 +1,14 @@
 import type { BookFormat, BookStatus } from './types'
 
 export const HABIT_COLORS = [
-  '#3E6B55',
-  '#4A6FA5',
-  '#C46A3A',
-  '#7A5C9E',
-  '#2F6F6A',
-  '#A67C2D',
-  '#B4533A',
-  '#5C6B4A',
+  '#4A6CF7', // Primary Blue
+  '#22C55E', // Success Green
+  '#EAB308', // Gold
+  '#EF4444', // Red
+  '#8B5CF6', // Violet
+  '#14B8A6', // Teal
+  '#EC4899', // Pink
+  '#F97316', // Orange
 ] as const
 
 export const HABIT_ICONS = [
@@ -74,3 +74,4 @@ export const STATUSES: { id: BookStatus; label: string }[] = [
 export const STORAGE_KEY = 'onesh-data-v1'
 export const THEME_MODE_KEY = 'onesh-theme-mode'
 export const LAST_USERNAME_KEY = 'onesh-last-username'
+export const LAST_PAGE_KEY = 'onesh-last-page'

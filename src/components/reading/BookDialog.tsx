@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FORMATS, GENRES, STATUSES } from '../../constants'
 import { normalizeBook } from '../../lib/books'
+import { todayISO } from '../../lib/dates'
 import type { Book, BookFormat, BookStatus } from '../../types'
 import { Dialog } from '../Dialog'
 
@@ -13,7 +14,7 @@ const blank = (): Draft => ({
   pages: 0,
   pagesRead: 0,
   rating: 0,
-  dateStart: '',
+  dateStart: todayISO(),
   dateFinish: '',
   format: 'book',
   genre: 'Fiction',
@@ -28,6 +29,7 @@ type Props = {
 }
 
 export function BookDialog({ book, onClose, onSave, onDelete }: Props) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [draft, setDraft] = useState<Draft>(() =>
     book
       ? {
@@ -140,27 +142,40 @@ export function BookDialog({ book, onClose, onSave, onDelete }: Props) {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="book-rating">Rating</label>
-            <select id="book-rating" value={draft.rating} onChange={(e) => set('rating', Number(e.target.value))}>
-              <option value={0}>No rating</option>
-              <option value={1}>★</option>
-              <option value={2}>★★</option>
-              <option value={3}>★★★</option>
-              <option value={4}>★★★★</option>
-              <option value={5}>★★★★★</option>
-            </select>
+            <label>Rating</label>
+            <div className="stars-input" role="group" aria-label="Rating">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={draft.rating >= value ? 'on' : ''}
+                  onClick={() => set('rating', draft.rating === value ? 0 : value)}
+                  aria-label={`${value} star${value === 1 ? '' : 's'}`}
+                  aria-pressed={draft.rating >= value}
+                >
+                  ★
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <div className="dialog-actions">
           {onDelete ? (
-            <button className="danger" type="button" onClick={onDelete}>
-              Delete
+            <button
+              className="danger"
+              type="button"
+              onClick={() => {
+                if (confirmDelete) onDelete()
+                else setConfirmDelete(true)
+              }}
+            >
+              {confirmDelete ? 'Delete forever' : 'Delete'}
             </button>
           ) : null}
           <button className="ghost" type="button" onClick={onClose}>
             Cancel
           </button>
-          <button className="primary" type="submit">
+          <button className="primary" type="submit" disabled={!draft.title.trim()}>
             Save book
           </button>
         </div>

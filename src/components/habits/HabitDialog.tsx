@@ -15,6 +15,7 @@ export function HabitDialog({ habit, onClose, onSave, onDelete }: Props) {
   const [name, setName] = useState(habit?.name ?? '')
   const [color, setColor] = useState(habit?.color ?? HABIT_COLORS[0])
   const [icon, setIcon] = useState(habit?.icon ?? HABIT_ICONS[0].id)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const selectedMark = HABIT_ICONS.find((item) => item.id === icon)
 
   return (
@@ -75,14 +76,21 @@ export function HabitDialog({ habit, onClose, onSave, onDelete }: Props) {
         </div>
         <div className="dialog-actions">
           {onDelete ? (
-            <button className="danger" type="button" onClick={onDelete}>
-              Delete
+            <button
+              className="danger"
+              type="button"
+              onClick={() => {
+                if (confirmDelete) onDelete()
+                else setConfirmDelete(true)
+              }}
+            >
+              {confirmDelete ? 'Delete forever' : 'Delete'}
             </button>
           ) : null}
           <button className="ghost" type="button" onClick={onClose}>
             Cancel
           </button>
-          <button className="primary" type="submit">
+          <button className="primary" type="submit" disabled={!name.trim()}>
             Save habit
           </button>
         </div>

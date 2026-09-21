@@ -169,7 +169,7 @@ export function AuthScreen() {
                 id="auth-username-hint"
                 className={`auth-hint ${username && userHint ? 'warn' : username && !userHint ? 'ok' : ''}`}
               >
-                {userHint || 'Looks good'}
+                {userHint || (username ? 'Looks good' : '3–24 letters, numbers, or _')}
               </span>
             </div>
 
@@ -212,7 +212,7 @@ export function AuthScreen() {
                 id="auth-password-hint"
                 className={`auth-hint ${capsLock || (password && passHint) ? 'warn' : password && !passHint ? 'ok' : ''}`}
               >
-                {capsLock ? 'Caps Lock is on' : passHint || 'Looks good'}
+                {capsLock ? 'Caps Lock is on' : passHint || (password ? 'Looks good' : 'At least 8 characters')}
               </span>
             </div>
 
