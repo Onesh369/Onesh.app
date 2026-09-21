@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../auth'
-import { canSubmit, cleanUsername, passwordHint, passwordScore, passwordScoreLabel, usernameHint } from '../lib/credentials'
+import { canSubmit, cleanUsername, emailHint, passwordHint, passwordScore, passwordScoreLabel, usernameHint } from '../lib/credentials'
 import { hasLocalContent } from '../lib/storage'
 import { readGuestTheme, readLastUsername, takeSessionExpired, writeGuestTheme, writeLastUsername } from '../lib/session'
 import { ThemeSwitch } from './ThemeToggle'
@@ -33,6 +33,7 @@ export function AuthScreen() {
   const { login, signup } = useAuth()
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [username, setUsername] = useState(() => readLastUsername())
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -44,9 +45,10 @@ export function AuthScreen() {
   const isSignup = mode === 'signup'
   const localNote = isSignup && hasLocalContent()
   const userHint = usernameHint(username)
+  const mailHint = emailHint(email)
   const passHint = passwordHint(password, isSignup ? confirm : undefined)
   const score = passwordScore(password)
-  const ready = canSubmit(mode, username, password, confirm)
+  const ready = canSubmit(mode, username, password, confirm, email)
 
   useEffect(() => {
     usernameRef.current?.focus()
@@ -72,7 +74,7 @@ export function AuthScreen() {
     setError('')
     setBusy(true)
     try {
-      if (isSignup) await signup(username, password)
+      if (isSignup) await signup(username, email, password)
       else await login(username, password)
       writeLastUsername(username)
     } catch (err) {
@@ -84,6 +86,7 @@ export function AuthScreen() {
 
   const switchMode = (next: 'signin' | 'signup') => {
     setMode(next)
+    setEmail('')
     setPassword('')
     setConfirm('')
     setError('')
@@ -172,6 +175,35 @@ export function AuthScreen() {
                 {userHint || (username ? 'Looks good' : '3–24 letters, numbers, or _')}
               </span>
             </div>
+
+            {isSignup ? (
+              <div className="field wide">
+                <label htmlFor="auth-email">Email</label>
+                <input
+                  id="auth-email"
+                  autoComplete="email"
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="next"
+                  maxLength={255}
+                  name="email"
+                  onChange={(event) => setEmail(event.target.value.trim())}
+                  placeholder="you@example.com"
+                  required
+                  type="email"
+                  value={email}
+                  aria-invalid={Boolean(email) && Boolean(mailHint)}
+                  aria-describedby="auth-email-hint"
+                />
+                <span
+                  id="auth-email-hint"
+                  className={`auth-hint ${email && mailHint ? 'warn' : email && !mailHint ? 'ok' : ''}`}
+                >
+                  {mailHint || (email ? 'Looks good' : 'Your email address')}
+                </span>
+              </div>
+            ) : null}
 
             <div className="field wide">
               <label htmlFor="auth-password">Password</label>

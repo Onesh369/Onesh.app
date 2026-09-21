@@ -1,4 +1,5 @@
 export const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,24}$/
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function cleanUsername(value: string) {
   return value.replace(/[^A-Za-z0-9_]/g, '').slice(0, 24)
@@ -8,6 +9,12 @@ export function usernameHint(value: string) {
   if (!value) return '3–24 letters, numbers, or _'
   if (value.length < 3) return `${3 - value.length} more character${value.length === 2 ? '' : 's'}`
   if (!USERNAME_PATTERN.test(value)) return 'Only letters, numbers, and _'
+  return ''
+}
+
+export function emailHint(value: string) {
+  if (!value) return 'Your email address'
+  if (!EMAIL_PATTERN.test(value)) return 'Enter a valid email'
   return ''
 }
 
@@ -34,8 +41,9 @@ export function passwordScoreLabel(score: number) {
   return 'Solid'
 }
 
-export function canSubmit(mode: 'signin' | 'signup', username: string, password: string, confirm: string) {
+export function canSubmit(mode: 'signin' | 'signup', username: string, password: string, confirm: string, email?: string) {
   if (!USERNAME_PATTERN.test(username) || password.length < 8) return false
   if (mode === 'signup' && password !== confirm) return false
+  if (mode === 'signup' && (!email || !EMAIL_PATTERN.test(email))) return false
   return true
 }

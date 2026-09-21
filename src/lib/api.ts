@@ -46,10 +46,10 @@ export function getMe() {
   return request<AuthUser>('/api/me')
 }
 
-export function signup(username: string, password: string) {
+export function signup(username: string, email: string, password: string) {
   return request<AuthUser>('/api/signup', {
     method: 'POST',
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, email, password }),
   })
 }
 

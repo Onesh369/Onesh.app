@@ -1,5 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,13 +8,21 @@ import { getCookie, setCookie } from 'hono/cookie'
 import { serve } from '@hono/node-server'
 import { serveStatic } from '@hono/node-server/serve-static'
 import bcrypt from 'bcryptjs'
+import {
+  migrate,
+  findUserByUsername,
+  findUserByEmail,
+  findUserById,
+  createUser,
+  listUsers,
+  getUserData,
+  saveUserData,
+} from './db.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = join(__dirname, '..')
 const distDir = join(rootDir, 'dist')
 const dataDir = process.env.DATA_DIR || join(rootDir, 'data')
-const usersFile = join(dataDir, 'users.json')
-const payloadsDir = join(dataDir, 'payloads')
 const secretFile = join(dataDir, 'secret')
 const cookieName = 'onesh_session'
 const port = Number(process.env.PORT || 8787)
@@ -32,16 +40,6 @@ const emptyData = {
 }
 
 const hits = new Map()
-let writeChain = Promise.resolve()
-
-function withLock(fn) {
-  const run = writeChain.then(fn, fn)
-  writeChain = run.then(
-    () => undefined,
-    () => undefined,
-  )
-  return run
-}
 
 function limited(key, max = 20, windowMs = 15 * 60 * 1000) {
   const now = Date.now()
@@ -59,33 +57,15 @@ function b64url(value) {
   return Buffer.from(JSON.stringify(value)).toString('base64url')
 }
 
-async function ensureStore() {
-  await mkdir(payloadsDir, { recursive: true })
+async function ensureSecret() {
+  await mkdir(dataDir, { recursive: true })
   if (!existsSync(secretFile)) {
     await writeFile(secretFile, randomBytes(48).toString('hex'), 'utf8')
-  }
-  if (!existsSync(usersFile)) {
-    await writeJson(usersFile, { users: [] })
   }
 }
 
 async function secret() {
   return readFile(secretFile, 'utf8')
-}
-
-async function writeJson(path, value) {
-  const tmp = `${path}.${process.pid}.tmp`
-  await writeFile(tmp, JSON.stringify(value), 'utf8')
-  await rename(tmp, path)
-}
-
-async function readUsers() {
-  try {
-    const parsed = JSON.parse(await readFile(usersFile, 'utf8'))
-    return Array.isArray(parsed.users) ? parsed.users : []
-  } catch {
-    return []
-  }
 }
 
 function signToken(payload, key) {
@@ -158,6 +138,10 @@ function usernameOk(username) {
   return typeof username === 'string' && /^[a-zA-Z0-9_]{3,24}$/.test(username)
 }
 
+function emailOk(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 255
+}
+
 function passwordOk(password) {
   return typeof password === 'string' && password.length >= 8 && password.length <= 72
 }
@@ -167,8 +151,7 @@ async function currentUser(c) {
   if (!token) return null
   const payload = verifyToken(token, await secret())
   if (!payload) return null
-  const users = await readUsers()
-  return users.find((user) => user.id === payload.sub) ?? null
+  return findUserById(payload.sub)
 }
 
 function setSession(c, token) {
@@ -195,72 +178,84 @@ function clearSession(c) {
 
 const app = new Hono()
 
+/* ── Signup ── */
 app.post('/api/signup', async (c) => {
   const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
   if (limited(`signup:${ip}`)) return c.json({ error: 'Too many attempts. Try again later.' }, 429)
   const body = await c.req.json().catch(() => null)
   const username = typeof body?.username === 'string' ? body.username.trim() : ''
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : ''
   const password = typeof body?.password === 'string' ? body.password : ''
   if (!usernameOk(username)) {
     return c.json({ error: 'Username must be 3–24 letters, numbers, or _.' }, 400)
   }
+  if (!emailOk(email)) {
+    return c.json({ error: 'Please enter a valid email address.' }, 400)
+  }
   if (!passwordOk(password)) return c.json({ error: 'Password must be at least 8 characters.' }, 400)
 
-  return withLock(async () => {
-    const users = await readUsers()
-    if (users.some((user) => user.username.toLowerCase() === username.toLowerCase())) {
-      return c.json({ error: 'That username is already taken. Try another.' }, 409)
-    }
-    const user = {
-      id: crypto.randomUUID(),
-      username,
-      passwordHash: await bcrypt.hash(password, 10),
-      createdAt: new Date().toISOString(),
-    }
-    users.push(user)
-    await writeJson(usersFile, { users })
-    await writeJson(join(payloadsDir, `${user.id}.json`), emptyData)
-    setSession(c, signToken({ sub: user.id, username: user.username }, await secret()))
-    return c.json({ id: user.id, username: user.username })
-  })
+  const existingUsername = await findUserByUsername(username)
+  if (existingUsername) {
+    return c.json({ error: 'That username is already taken. Try another.' }, 409)
+  }
+  const existingEmail = await findUserByEmail(email)
+  if (existingEmail) {
+    return c.json({ error: 'That email is already in use. Try another or sign in.' }, 409)
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10)
+  const user = await createUser(username, email, passwordHash)
+  await saveUserData(user.id, emptyData)
+  setSession(c, signToken({ sub: user.id, username: user.username }, await secret()))
+  return c.json({ id: user.id, username: user.username })
 })
 
+/* ── Login ── */
 app.post('/api/login', async (c) => {
   const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
   if (limited(`login:${ip}`)) return c.json({ error: 'Too many attempts. Try again later.' }, 429)
   const body = await c.req.json().catch(() => null)
   const username = typeof body?.username === 'string' ? body.username.trim() : ''
   const password = typeof body?.password === 'string' ? body.password : ''
-  const users = await readUsers()
-  const user = users.find((item) => item.username.toLowerCase() === username.toLowerCase())
-  const ok = await bcrypt.compare(password, user?.passwordHash ?? dummyHash)
+
+  /* Allow login with either username or email */
+  let user = await findUserByUsername(username)
+  if (!user && username.includes('@')) {
+    user = await findUserByEmail(username.toLowerCase())
+  }
+
+  const ok = await bcrypt.compare(password, user?.password_hash ?? dummyHash)
   if (!user || !ok) return c.json({ error: 'That username or password does not match.' }, 401)
   setSession(c, signToken({ sub: user.id, username: user.username }, await secret()))
   return c.json({ id: user.id, username: user.username })
 })
 
+/* ── Logout ── */
 app.post('/api/logout', (c) => {
   clearSession(c)
   return c.json({ ok: true })
 })
 
+/* ── Current user ── */
 app.get('/api/me', async (c) => {
   const user = await currentUser(c)
   if (!user) return c.json({ error: 'Sign in required.' }, 401)
   return c.json({ id: user.id, username: user.username })
 })
 
+/* ── Get app data ── */
 app.get('/api/data', async (c) => {
   const user = await currentUser(c)
   if (!user) return c.json({ error: 'Sign in required.' }, 401)
   try {
-    const raw = JSON.parse(await readFile(join(payloadsDir, `${user.id}.json`), 'utf8'))
-    return c.json(sanitizeData(raw))
+    const raw = await getUserData(user.id)
+    return c.json(raw ? sanitizeData(raw) : emptyData)
   } catch {
     return c.json(emptyData)
   }
 })
 
+/* ── Save app data ── */
 app.put('/api/data', async (c) => {
   const user = await currentUser(c)
   if (!user) return c.json({ error: 'Sign in required.' }, 401)
@@ -268,10 +263,21 @@ app.put('/api/data', async (c) => {
   if (length > 2_000_000) return c.json({ error: 'Data is too large.' }, 413)
   const body = await c.req.json().catch(() => null)
   const data = sanitizeData(body)
-  await withLock(() => writeJson(join(payloadsDir, `${user.id}.json`), data))
+  await saveUserData(user.id, data)
   return c.json({ ok: true })
 })
 
+/* ── Admin: list users (protected by secret header) ── */
+app.get('/api/admin/users', async (c) => {
+  const adminKey = process.env.ADMIN_KEY
+  if (!adminKey || c.req.header('x-admin-key') !== adminKey) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
+  const users = await listUsers()
+  return c.json({ users })
+})
+
+/* ── Static files ── */
 if (existsSync(distDir)) {
   app.use(
     '/*',
@@ -291,7 +297,8 @@ if (existsSync(distDir)) {
   })
 }
 
-await ensureStore()
+await ensureSecret()
+await migrate()
 
 serve({ fetch: app.fetch, port, hostname: '0.0.0.0' }, (info) => {
   console.log(`Onesh API listening on port ${info.port}`)

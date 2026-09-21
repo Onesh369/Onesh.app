@@ -7,7 +7,7 @@ import { flushCloudSave } from './lib/sync'
 type Auth = {
   user: AuthUser | null
   loading: boolean
-  signup: (username: string, password: string) => Promise<void>
+  signup: (username: string, email: string, password: string) => Promise<void>
   login: (username: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -44,8 +44,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const signup = useCallback(async (username: string, password: string) => {
-    const next = await apiSignup(username, password)
+  const signup = useCallback(async (username: string, email: string, password: string) => {
+    const next = await apiSignup(username, email, password)
     const local = loadData()
     if (hasLocalContent(local)) {
       await putData(local).catch(() => undefined)
