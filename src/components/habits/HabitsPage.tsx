@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useI18n } from '../../i18n'
 import { addDays, formatLong, isToday, lastNDays, todayISO } from '../../lib/dates'
 import { sortHabits } from '../../lib/habits'
 import { useStore } from '../../store'
@@ -8,6 +9,7 @@ import { HabitMark } from './HabitMark'
 import { HabitStats } from './HabitStats'
 
 export function HabitsPage() {
+  const { t, localeTag } = useI18n()
   const { habits, addHabit, updateHabit, deleteHabit, reorderHabits, toggleHabit, isDone, streak } = useStore()
   const ordered = useMemo(() => sortHabits(habits), [habits])
   const [selected, setSelected] = useState(todayISO())
@@ -95,11 +97,11 @@ export function HabitsPage() {
       <section className="panel">
         <div className="section-head">
           <div>
-            <div className="kicker">{isToday(selected) ? 'Today' : 'Review'}</div>
-            <h2>{formatLong(selected)}</h2>
+            <div className="kicker">{isToday(selected) ? t('common.today') : t('common.review')}</div>
+            <h2>{formatLong(selected, localeTag)}</h2>
           </div>
           <div className="date-nav">
-            <button className="icon-btn" type="button" onClick={() => setSelected(addDays(selected, -1))} aria-label="Previous day">
+            <button className="icon-btn" type="button" onClick={() => setSelected(addDays(selected, -1))} aria-label={t('common.previousDay')}>
               ‹
             </button>
             <button
@@ -107,39 +109,39 @@ export function HabitsPage() {
               type="button"
               onClick={() => setSelected(today)}
             >
-              Today
+              {t('common.today')}
             </button>
-            <button className="icon-btn" type="button" onClick={() => setSelected(addDays(selected, 1))} aria-label="Next day">
+            <button className="icon-btn" type="button" onClick={() => setSelected(addDays(selected, 1))} aria-label={t('common.nextDay')}>
               ›
             </button>
             <button className="primary" type="button" onClick={() => setCreating(true)}>
-              Add habit
+              {t('habits.add')}
             </button>
           </div>
         </div>
 
         {habits.length > 0 ? (
           <>
-            <div className="plan-meter" aria-label={`${doneSelected} of ${habits.length} done`}>
+            <div className="plan-meter" aria-label={t('habits.doneOf', { done: doneSelected, total: habits.length })}>
               <span style={{ width: `${(doneSelected / habits.length) * 100}%` }} />
             </div>
             <p className="plan-count">
-              {doneSelected} of {habits.length} done
-              {doneSelected === habits.length && selected <= today ? ' · All clear' : ''}
+              {t('habits.doneOf', { done: doneSelected, total: habits.length })}
+              {doneSelected === habits.length && selected <= today ? ` · ${t('habits.allClear')}` : ''}
             </p>
           </>
         ) : null}
 
         {selected > today ? (
-          <p className="future-note">This day has not started yet. You can look around — checks wait until it arrives.</p>
+          <p className="future-note">{t('habits.futureNote')}</p>
         ) : null}
 
         {habits.length === 0 ? (
           <div className="empty">
-            <h3>Start with one small habit</h3>
-            <p>Tap the circle each day. The calendar and stats fill themselves.</p>
+            <h3>{t('habits.emptyTitle')}</h3>
+            <p>{t('habits.emptyText')}</p>
             <button className="primary" type="button" onClick={() => setCreating(true)}>
-              Add your first habit
+              {t('habits.addFirst')}
             </button>
           </div>
         ) : (
@@ -159,7 +161,7 @@ export function HabitsPage() {
                     <button
                       type="button"
                       className="reorder-btn"
-                      aria-label={`Move ${habit.name} up`}
+                      aria-label={t('habits.moveUp', { name: habit.name })}
                       disabled={!canReorder || index === 0}
                       onClick={() => moveBy(habit.id, -1)}
                     >
@@ -169,7 +171,7 @@ export function HabitsPage() {
                       className="habit-grip"
                       role="button"
                       tabIndex={canReorder ? 0 : -1}
-                      aria-label={`Reorder ${habit.name}. Drag, or use arrow keys to move.`}
+                      aria-label={t('habits.reorder', { name: habit.name })}
                       aria-disabled={!canReorder}
                       onPointerDown={(event) => startPointerDrag(habit.id, event)}
                       onPointerMove={onGripPointerMove}
@@ -191,7 +193,7 @@ export function HabitsPage() {
                     <button
                       type="button"
                       className="reorder-btn"
-                      aria-label={`Move ${habit.name} down`}
+                      aria-label={t('habits.moveDown', { name: habit.name })}
                       disabled={!canReorder || index === ordered.length - 1}
                       onClick={() => moveBy(habit.id, 1)}
                     >
@@ -223,16 +225,16 @@ export function HabitsPage() {
                     }}
                     disabled={selected > today}
                     aria-pressed={done}
-                    aria-label={`${done ? 'Uncheck' : 'Complete'} ${habit.name}`}
+                    aria-label={done ? t('habits.uncheck', { name: habit.name }) : t('habits.complete', { name: habit.name })}
                   >
                     <HabitMark id={habit.icon} />
                   </button>
                   <div className="habit-meta">
                     <h3>
                       {habit.name}
-                      <span className="streak streak-inline">{streak(habit.id)}d</span>
+                      <span className="streak streak-inline">{t('habits.dayStreakShort', { n: streak(habit.id) })}</span>
                       <button className="tiny habit-edit-mobile" type="button" onClick={() => setEditing(habit)}>
-                        Edit
+                        {t('common.edit')}
                       </button>
                     </h3>
                     <div className="week-dots">
@@ -243,15 +245,15 @@ export function HabitsPage() {
                           className={`week-dot ${isDone(habit.id, date) ? 'on' : ''} ${isToday(date) ? 'today' : ''} ${selected === date ? 'picked' : ''}`}
                           style={{ '--habit': habit.color } as CSSProperties}
                           onClick={() => setSelected(date)}
-                          aria-label={`${date}${isDone(habit.id, date) ? ', done' : ''}`}
+                          aria-label={`${date}${isDone(habit.id, date) ? t('habits.doneSuffix') : ''}`}
                         />
                       ))}
                     </div>
                   </div>
                   <div className="habit-side">
-                    <span className="streak">{streak(habit.id)} day streak</span>
+                    <span className="streak">{t('habits.dayStreak', { n: streak(habit.id) })}</span>
                     <button className="tiny" type="button" onClick={() => setEditing(habit)}>
-                      Edit
+                      {t('common.edit')}
                     </button>
                   </div>
                 </article>

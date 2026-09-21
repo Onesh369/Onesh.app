@@ -1,11 +1,8 @@
+import { useI18n } from '../i18n'
 import { useStore } from '../store'
 import type { ThemeMode } from '../types'
 
-const MODES: { id: ThemeMode; label: string }[] = [
-  { id: 'auto', label: 'Auto' },
-  { id: 'light', label: 'Light' },
-  { id: 'dark', label: 'Night' },
-]
+const MODE_IDS: ThemeMode[] = ['auto', 'light', 'dark']
 
 const NEXT: Record<ThemeMode, ThemeMode> = {
   auto: 'light',
@@ -20,18 +17,19 @@ export function ThemeSwitch({
   value: ThemeMode
   onChange: (mode: ThemeMode) => void
 }) {
-  const current = MODES.find((mode) => mode.id === value) ?? MODES[0]
+  const { t } = useI18n()
+  const currentLabel = t(`theme.${value}`)
   return (
     <>
-      <div className="theme-switch" role="group" aria-label="Theme">
-        {MODES.map((mode) => (
+      <div className="theme-switch" role="group" aria-label={t('theme.group')}>
+        {MODE_IDS.map((id) => (
           <button
-            key={mode.id}
-            className={`theme-btn ${value === mode.id ? 'active' : ''}`}
-            onClick={() => onChange(mode.id)}
+            key={id}
+            className={`theme-btn ${value === id ? 'active' : ''}`}
+            onClick={() => onChange(id)}
             type="button"
           >
-            {mode.label}
+            {t(`theme.${id}`)}
           </button>
         ))}
       </div>
@@ -39,8 +37,8 @@ export function ThemeSwitch({
         className="icon-btn theme-cycle"
         type="button"
         onClick={() => onChange(NEXT[value])}
-        aria-label={`Theme: ${current.label}. Switch theme`}
-        title={current.label}
+        aria-label={t('theme.switch', { label: currentLabel })}
+        title={currentLabel}
       >
         <ThemeGlyph mode={value} />
       </button>

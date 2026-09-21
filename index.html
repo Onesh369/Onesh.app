@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
     <script>
@@ -27,6 +27,11 @@
             mode === 'light' ? 'light' : mode === 'dark' ? 'dark' : hour >= 6 && hour < 19 ? 'light' : 'dark'
           document.documentElement.dataset.theme = resolved
           document.documentElement.dataset.themeMode = mode
+          var lang = localStorage.getItem('onesh-lang') || 'en'
+          if (lang !== 'fr' && lang !== 'ar') lang = 'en'
+          document.documentElement.lang = lang
+          document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
+          document.documentElement.dataset.lang = lang
         } catch (e) {}
       })()
     </script>

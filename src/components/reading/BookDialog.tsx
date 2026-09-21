@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FORMATS, GENRES, STATUSES } from '../../constants'
+import { useI18n, type MessageKey } from '../../i18n'
 import { normalizeBook } from '../../lib/books'
 import { todayISO } from '../../lib/dates'
 import type { Book, BookFormat, BookStatus } from '../../types'
@@ -29,6 +30,7 @@ type Props = {
 }
 
 export function BookDialog({ book, onClose, onSave, onDelete }: Props) {
+  const { t } = useI18n()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [draft, setDraft] = useState<Draft>(() =>
     book
@@ -53,7 +55,7 @@ export function BookDialog({ book, onClose, onSave, onDelete }: Props) {
   }
 
   return (
-    <Dialog title={book ? 'Edit book' : 'Add a book'} onClose={onClose}>
+    <Dialog title={book ? t('reading.editBook') : t('reading.addABook')} onClose={onClose}>
       <form
         onSubmit={(event) => {
           event.preventDefault()
@@ -64,19 +66,19 @@ export function BookDialog({ book, onClose, onSave, onDelete }: Props) {
       >
         <div className="form-grid">
           <div className="field wide">
-            <label htmlFor="book-title">Book name</label>
+            <label htmlFor="book-title">{t('reading.bookName')}</label>
             <input id="book-title" value={draft.title} onChange={(e) => set('title', e.target.value)} autoFocus />
           </div>
           <div className="field">
-            <label htmlFor="book-author">Author</label>
+            <label htmlFor="book-author">{t('reading.author')}</label>
             <input id="book-author" value={draft.author} onChange={(e) => set('author', e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="book-year">Year</label>
+            <label htmlFor="book-year">{t('reading.year')}</label>
             <input id="book-year" value={draft.year} onChange={(e) => set('year', e.target.value)} placeholder="2024" />
           </div>
           <div className="field">
-            <label htmlFor="book-pages">Pages</label>
+            <label htmlFor="book-pages">{t('reading.pages')}</label>
             <input
               id="book-pages"
               type="number"
@@ -86,7 +88,7 @@ export function BookDialog({ book, onClose, onSave, onDelete }: Props) {
             />
           </div>
           <div className="field">
-            <label htmlFor="book-read">Pages read</label>
+            <label htmlFor="book-read">{t('reading.pagesRead')}</label>
             <input
               id="book-read"
               type="number"
@@ -96,15 +98,15 @@ export function BookDialog({ book, onClose, onSave, onDelete }: Props) {
             />
           </div>
           <div className="field">
-            <label htmlFor="book-start">Date start</label>
+            <label htmlFor="book-start">{t('reading.dateStart')}</label>
             <input id="book-start" type="date" value={draft.dateStart} onChange={(e) => set('dateStart', e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="book-finish">Date finish</label>
+            <label htmlFor="book-finish">{t('reading.dateFinish')}</label>
             <input id="book-finish" type="date" value={draft.dateFinish} onChange={(e) => set('dateFinish', e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="book-format">Format</label>
+            <label htmlFor="book-format">{t('reading.format')}</label>
             <select
               id="book-format"
               value={draft.format}
@@ -112,23 +114,23 @@ export function BookDialog({ book, onClose, onSave, onDelete }: Props) {
             >
               {FORMATS.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.label}
+                  {t(`reading.formats.${item.id}`)}
                 </option>
               ))}
             </select>
           </div>
           <div className="field">
-            <label htmlFor="book-genre">Genre</label>
+            <label htmlFor="book-genre">{t('reading.genre')}</label>
             <select id="book-genre" value={draft.genre} onChange={(e) => set('genre', e.target.value)}>
               {GENRES.map((genre) => (
                 <option key={genre} value={genre}>
-                  {genre}
+                  {t(`reading.genres.${genre}` as MessageKey)}
                 </option>
               ))}
             </select>
           </div>
           <div className="field">
-            <label htmlFor="book-status">Status</label>
+            <label htmlFor="book-status">{t('reading.status')}</label>
             <select
               id="book-status"
               value={draft.status}
@@ -136,21 +138,21 @@ export function BookDialog({ book, onClose, onSave, onDelete }: Props) {
             >
               {STATUSES.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.label}
+                  {t(`reading.statuses.${item.id}`)}
                 </option>
               ))}
             </select>
           </div>
           <div className="field">
-            <label>Rating</label>
-            <div className="stars-input" role="group" aria-label="Rating">
+            <label>{t('reading.rating')}</label>
+            <div className="stars-input" role="group" aria-label={t('reading.rating')}>
               {[1, 2, 3, 4, 5].map((value) => (
                 <button
                   key={value}
                   type="button"
                   className={draft.rating >= value ? 'on' : ''}
                   onClick={() => set('rating', draft.rating === value ? 0 : value)}
-                  aria-label={`${value} star${value === 1 ? '' : 's'}`}
+                  aria-label={value === 1 ? t('reading.star', { n: value }) : t('reading.stars', { n: value })}
                   aria-pressed={draft.rating >= value}
                 >
                   ★
@@ -169,14 +171,14 @@ export function BookDialog({ book, onClose, onSave, onDelete }: Props) {
                 else setConfirmDelete(true)
               }}
             >
-              {confirmDelete ? 'Delete forever' : 'Delete'}
+              {confirmDelete ? t('common.deleteForever') : t('common.delete')}
             </button>
           ) : null}
           <button className="ghost" type="button" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button className="primary" type="submit" disabled={!draft.title.trim()}>
-            Save book
+            {t('reading.saveBook')}
           </button>
         </div>
       </form>

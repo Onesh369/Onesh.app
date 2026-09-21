@@ -1,4 +1,5 @@
 import type { StatRange } from '../../types'
+import { useI18n, type MessageKey } from '../../i18n'
 import {
   addMonths,
   formatMonthYear,
@@ -20,14 +21,10 @@ type Props = {
   onSelect: (date: string) => void
 }
 
-const RANGES: { id: StatRange; label: string }[] = [
-  { id: 'day', label: 'Day' },
-  { id: 'week', label: 'Week' },
-  { id: 'month', label: 'Month' },
-  { id: 'year', label: 'Year' },
-]
+const RANGES: StatRange[] = ['day', 'week', 'month', 'year']
 
 export function HabitStats({ selected, range, onRange, onSelect }: Props) {
+  const { t, locale, localeTag } = useI18n()
   const { habits, completions, streak } = useStore()
   const week = lastNDays(selected, 7)
   const month = monthDates(selected)
@@ -48,8 +45,8 @@ export function HabitStats({ selected, range, onRange, onSelect }: Props) {
     <aside className="panel">
       <div className="section-head">
         <div>
-          <div className="kicker">Pulse</div>
-          <h2>Stats</h2>
+          <div className="kicker">{t('common.pulse')}</div>
+          <h2>{t('habits.stats')}</h2>
         </div>
         {range === 'month' || range === 'year' ? (
           <div className="date-nav">
@@ -57,16 +54,16 @@ export function HabitStats({ selected, range, onRange, onSelect }: Props) {
               className="icon-btn"
               type="button"
               onClick={() => onSelect(range === 'year' ? addMonths(selected, -12) : addMonths(selected, -1))}
-              aria-label="Previous"
+              aria-label={t('common.previous')}
             >
               ‹
             </button>
-            <span className="streak">{range === 'year' ? yearOf(selected) : formatMonthYear(selected)}</span>
+            <span className="streak">{range === 'year' ? yearOf(selected) : formatMonthYear(selected, localeTag)}</span>
             <button
               className="icon-btn"
               type="button"
               onClick={() => onSelect(range === 'year' ? addMonths(selected, 12) : addMonths(selected, 1))}
-              aria-label="Next"
+              aria-label={t('common.next')}
             >
               ›
             </button>
@@ -75,14 +72,14 @@ export function HabitStats({ selected, range, onRange, onSelect }: Props) {
       </div>
 
       <div className="stats-tabs">
-        {RANGES.map((item) => (
+        {RANGES.map((id) => (
           <button
-            key={item.id}
+            key={id}
             type="button"
-            className={`chip ${range === item.id ? 'active' : ''}`}
-            onClick={() => onRange(item.id)}
+            className={`chip ${range === id ? 'active' : ''}`}
+            onClick={() => onRange(id)}
           >
-            {item.label}
+            {t(`habits.${id}`)}
           </button>
         ))}
       </div>
@@ -90,28 +87,28 @@ export function HabitStats({ selected, range, onRange, onSelect }: Props) {
       <div className="stat-grid">
         <div className="stat">
           <b>{Math.round(headline * 100)}%</b>
-          <span>{range} done</span>
+          <span>{t(`habits.${range}Done` as MessageKey)}</span>
         </div>
         <div className="stat">
           <b>
             {doneCount(habits, completions, selected)}/{habits.length || 0}
           </b>
-          <span>this day</span>
+          <span>{t('habits.thisDay')}</span>
         </div>
         <div className="stat">
           <b>{topStreak}</b>
-          <span>best streak</span>
+          <span>{t('habits.bestStreak')}</span>
         </div>
       </div>
 
       {range === 'week' || range === 'day' ? (
-        <div className="bars" aria-label="Last seven days">
+        <div className="bars" aria-label={t('habits.lastSeven')}>
           {week.map((date) => {
             const rate = rateForDay(habits, completions, date)
             return (
               <button key={date} className="bar" type="button" onClick={() => onSelect(date)}>
                 <i style={{ height: `${Math.max(8, rate * 100)}px` }} />
-                <span>{weekdayLabel(date)}</span>
+                <span>{weekdayLabel(date, locale)}</span>
               </button>
             )
           })}
@@ -123,7 +120,7 @@ export function HabitStats({ selected, range, onRange, onSelect }: Props) {
       ) : null}
 
       {range === 'year' ? (
-        <div className="year-heat" aria-label="Year heatmap">
+        <div className="year-heat" aria-label={t('habits.yearHeat')}>
           {Array.from({ length: weekdayIndex(`${yearOf(selected)}-01-01`) }).map((_, index) => (
             <span key={`pad-${index}`} className="year-cell heat-0" style={{ visibility: 'hidden' }} />
           ))}

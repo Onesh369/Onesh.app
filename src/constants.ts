@@ -73,5 +73,6 @@ export const STATUSES: { id: BookStatus; label: string }[] = [
 
 export const STORAGE_KEY = 'onesh-data-v1'
 export const THEME_MODE_KEY = 'onesh-theme-mode'
+export const LANG_KEY = 'onesh-lang'
 export const LAST_USERNAME_KEY = 'onesh-last-username'
 export const LAST_PAGE_KEY = 'onesh-last-page'

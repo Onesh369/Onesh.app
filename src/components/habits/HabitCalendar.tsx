@@ -1,5 +1,6 @@
-import { isToday, WEEKDAYS } from '../../lib/dates'
+import { isToday, weekdaysShort } from '../../lib/dates'
 import { rateForDay } from '../../lib/habits'
+import { useI18n } from '../../i18n'
 import { useStore } from '../../store'
 
 type Props = {
@@ -17,11 +18,12 @@ function heatClass(rate: number): string {
 }
 
 export function HabitCalendar({ cells, selected, onSelect }: Props) {
+  const { t, locale } = useI18n()
   const { habits, completions } = useStore()
 
   return (
-    <div className="calendar" role="grid" aria-label="Month calendar">
-      {WEEKDAYS.map((day) => (
+    <div className="calendar" role="grid" aria-label={t('habits.monthCalendar')}>
+      {weekdaysShort(locale).map((day) => (
         <div key={day} className="dow">
           {day}
         </div>

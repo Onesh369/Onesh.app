@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap');
 
 :root {
   color-scheme: light;
@@ -209,7 +209,8 @@ p {
   box-shadow: 0 2px 8px color-mix(in srgb, var(--sky) 35%, transparent);
 }
 
-.theme-switch {
+.theme-switch,
+.lang-switch {
   display: flex;
   padding: 4px;
   border: 1px solid var(--line);
@@ -217,7 +218,8 @@ p {
   background: var(--paper);
 }
 
-.theme-btn {
+.theme-btn,
+.lang-btn {
   min-width: 58px;
   padding: 8px 10px;
   border-radius: 999px;
@@ -227,7 +229,13 @@ p {
   font-weight: 700;
 }
 
-.theme-btn.active {
+.lang-btn {
+  min-width: 42px;
+  padding: 8px 9px;
+}
+
+.theme-btn.active,
+.lang-btn.active {
   background: var(--sage-soft);
   color: var(--ink);
 }
@@ -261,7 +269,8 @@ p {
 .ghost:hover,
 .danger:hover,
 .nav button:hover,
-.theme-btn:hover {
+.theme-btn:hover,
+.lang-btn:hover {
   transform: translateY(-1px);
 }
 
@@ -726,7 +735,9 @@ p {
   margin-bottom: 0;
 }
 
-.plan-meter {
+.plan-meter,
+.progress {
+  display: flex;
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
@@ -813,7 +824,8 @@ p {
 
 .task.must {
   border-color: color-mix(in srgb, var(--clay) 45%, var(--line));
-  box-shadow: inset 3px 0 0 var(--clay);
+  box-shadow: none;
+  border-inline-start: 3px solid var(--clay);
 }
 
 .task.done {
@@ -886,7 +898,7 @@ p {
   color: inherit;
   font-size: 15px;
   font-weight: 750;
-  text-align: left;
+  text-align: start;
 }
 
 .task.done .task-title {
@@ -945,7 +957,7 @@ p {
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
-  text-align: left;
+  text-align: start;
 }
 
 .task-hint:hover {
@@ -1256,11 +1268,7 @@ p {
 }
 
 .progress {
-  height: 8px;
   margin: 12px 0 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--bg-deep);
 }
 
 .progress > span {
@@ -1299,7 +1307,7 @@ th,
 td {
   padding: 12px 10px;
   border-bottom: 1px solid var(--line);
-  text-align: left;
+  text-align: start;
   font-size: 13px;
   vertical-align: middle;
 }
@@ -1695,13 +1703,13 @@ th {
 }
 
 .field-input input {
-  padding-right: 68px;
+  padding-inline-end: 68px;
 }
 
 .field-eye {
   position: absolute;
   top: 50%;
-  right: 8px;
+  inset-inline-end: 8px;
   transform: translateY(-50%);
   padding: 6px 10px;
   border: 0;
@@ -1839,7 +1847,7 @@ th {
 .account-menu {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
+  inset-inline-end: 0;
   z-index: 8;
   width: min(280px, 78vw);
   padding: 14px;
@@ -1932,6 +1940,7 @@ th {
 .nav button,
 .chip,
 .theme-btn,
+.lang-btn,
 .ghost,
 .primary,
 .danger,
@@ -1994,7 +2003,8 @@ th {
   color: var(--sage);
 }
 
-.theme-cycle {
+.theme-cycle,
+.lang-cycle {
   display: none;
 }
 
@@ -2094,11 +2104,13 @@ th {
 
 @media (max-width: 860px) {
   .nav-desktop,
-  .theme-switch {
+  .theme-switch,
+  .lang-switch {
     display: none;
   }
 
-  .theme-cycle {
+  .theme-cycle,
+  .lang-cycle {
     display: inline-grid;
   }
 
@@ -2131,9 +2143,8 @@ th {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     position: fixed;
-    right: 0;
+    inset-inline: 0;
     bottom: 0;
-    left: 0;
     z-index: 12;
     padding: 6px 10px calc(8px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--line);
@@ -2291,4 +2302,72 @@ th {
     padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 }
+
+html[lang='ar'] {
+  --font-display: 'IBM Plex Sans Arabic', 'Plus Jakarta Sans', sans-serif;
+  --font-ui: 'IBM Plex Sans Arabic', 'Inter', sans-serif;
+}
+
+html[lang='ar'] body {
+  letter-spacing: 0;
+  word-spacing: 0;
+  line-height: 1.6;
+}
+
+html[lang='ar'] .brand h1,
+html[lang='ar'] .auth-story h1,
+html[lang='ar'] .section-head h2,
+html[lang='ar'] .dialog h2,
+html[lang='ar'] .empty h3,
+html[lang='ar'] .now-title,
+html[lang='ar'] .stat b,
+html[lang='ar'] .auth-card h2 {
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+html[lang='ar'] .kicker,
+html[lang='ar'] .task-field span,
+html[lang='ar'] .quick-label,
+html[lang='ar'] th,
+html[lang='ar'] .theme-btn,
+html[lang='ar'] .lang-btn,
+html[lang='ar'] .chip,
+html[lang='ar'] .auth-tabs button {
+  letter-spacing: 0.02em;
+}
+
+html[lang='ar'] .calendar .dow {
+  letter-spacing: 0;
+  font-size: 10px;
+  text-transform: none;
+}
+
+html[lang='ar'] .theme-btn {
+  min-width: 70px;
+}
+
+html[dir='rtl'] .date-nav,
+html[dir='rtl'] .calendar,
+html[dir='rtl'] .bars,
+html[dir='rtl'] .year-heat,
+html[dir='rtl'] .week-dots,
+html[dir='rtl'] .stars,
+html[dir='rtl'] .stars-input {
+  direction: ltr;
+}
+
+html[dir='rtl'] .plan-meter > span,
+html[dir='rtl'] .progress > span {
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--sage) 82%, var(--sky)),
+    var(--sage)
+  );
+}
+
+html[dir='rtl'] .progress > span {
+  background: linear-gradient(to left, color-mix(in srgb, var(--gold) 78%, var(--sky)), var(--gold));
+}
+
 

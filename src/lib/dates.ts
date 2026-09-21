@@ -1,9 +1,8 @@
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-]
+const WEEKDAYS_SHORT: Record<string, string[]> = {
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  fr: ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'],
+  ar: ['أحد', 'إثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
+}
 
 export function toISODate(date: Date): string {
   const y = date.getFullYear()
@@ -48,23 +47,25 @@ export function weekdayIndex(iso: string): number {
   return parseISODate(iso).getDay()
 }
 
-export function formatLong(iso: string): string {
-  const date = parseISODate(iso)
-  return `${WEEKDAYS_LONG[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()}`
+export function formatLong(iso: string, locale = 'en-US'): string {
+  return new Intl.DateTimeFormat(locale, { weekday: 'long', month: 'long', day: 'numeric' }).format(parseISODate(iso))
 }
 
-export function formatShort(iso: string): string {
-  const date = parseISODate(iso)
-  return `${MONTHS[date.getMonth()].slice(0, 3)} ${date.getDate()}`
+export function formatShort(iso: string, locale = 'en-US'): string {
+  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(parseISODate(iso))
 }
 
-export function formatMonthYear(iso: string): string {
-  const date = parseISODate(iso)
-  return `${MONTHS[date.getMonth()]} ${date.getFullYear()}`
+export function formatMonthYear(iso: string, locale = 'en-US'): string {
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(parseISODate(iso))
 }
 
-export function weekdayLabel(iso: string): string {
-  return WEEKDAYS[weekdayIndex(iso)]
+export function weekdayLabel(iso: string, locale = 'en'): string {
+  const days = WEEKDAYS_SHORT[locale.slice(0, 2)] ?? WEEKDAYS_SHORT.en
+  return days[weekdayIndex(iso)]
+}
+
+export function weekdaysShort(locale = 'en'): string[] {
+  return WEEKDAYS_SHORT[locale.slice(0, 2)] ?? WEEKDAYS_SHORT.en
 }
 
 export function yearOf(iso: string): number {
@@ -108,5 +109,3 @@ export function yearDays(year: number): string[] {
 export function isToday(iso: string): boolean {
   return iso === todayISO()
 }
-
-export { WEEKDAYS, MONTHS }

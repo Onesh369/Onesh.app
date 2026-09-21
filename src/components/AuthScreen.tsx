@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../auth'
-import { canSubmit, cleanUsername, emailHint, passwordHint, passwordScore, passwordScoreLabel, usernameHint } from '../lib/credentials'
+import { useI18n, type Translate } from '../i18n'
+import { canSubmit, cleanUsername, EMAIL_PATTERN, passwordScore, USERNAME_PATTERN } from '../lib/credentials'
 import { hasLocalContent } from '../lib/storage'
 import { readGuestTheme, readLastUsername, takeSessionExpired, writeGuestTheme, writeLastUsername } from '../lib/session'
+import { LanguageSwitch } from './LanguageSwitch'
 import { ThemeSwitch } from './ThemeToggle'
 import type { ThemeMode } from '../types'
 
@@ -16,21 +18,52 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           <span className="brand-dot" />
           Onesh 369
         </div>
-        <ThemeSwitch
-          value={themeMode}
-          onChange={(mode) => {
-            setThemeMode(mode)
-            writeGuestTheme(mode)
-          }}
-        />
+        <div className="mast-actions">
+          <LanguageSwitch />
+          <ThemeSwitch
+            value={themeMode}
+            onChange={(mode) => {
+              setThemeMode(mode)
+              writeGuestTheme(mode)
+            }}
+          />
+        </div>
       </header>
       {children}
     </div>
   )
 }
 
+function usernameHintText(value: string, t: Translate) {
+  if (!value) return t('auth.usernameRule')
+  if (value.length < 3) return value.length === 2 ? t('auth.usernameShortOne') : t('auth.usernameShort', { n: 3 - value.length })
+  if (!USERNAME_PATTERN.test(value)) return t('auth.usernameInvalid')
+  return ''
+}
+
+function emailHintText(value: string, t: Translate) {
+  if (!value) return t('auth.emailEmpty')
+  if (!EMAIL_PATTERN.test(value)) return t('auth.emailInvalid')
+  return ''
+}
+
+function passwordHintText(value: string, t: Translate, confirm?: string) {
+  if (!value) return t('auth.passwordRule')
+  if (value.length < 8) return t('auth.passwordShort', { n: 8 - value.length })
+  if (confirm !== undefined && confirm.length > 0 && confirm !== value) return t('auth.passwordMismatch')
+  return ''
+}
+
+function strengthLabel(score: number, t: Translate) {
+  if (score <= 1) return t('auth.strengthKeep')
+  if (score === 2) return t('auth.strengthOkay')
+  if (score === 3) return t('auth.strengthStrong')
+  return t('auth.strengthSolid')
+}
+
 export function AuthScreen() {
   const { login, signup } = useAuth()
+  const { t, translateError } = useI18n()
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [username, setUsername] = useState(() => readLastUsername())
   const [email, setEmail] = useState('')
@@ -44,9 +77,9 @@ export function AuthScreen() {
   const usernameRef = useRef<HTMLInputElement>(null)
   const isSignup = mode === 'signup'
   const localNote = isSignup && hasLocalContent()
-  const userHint = usernameHint(username)
-  const mailHint = emailHint(email)
-  const passHint = passwordHint(password, isSignup ? confirm : undefined)
+  const userHint = usernameHintText(username, t)
+  const mailHint = emailHintText(email, t)
+  const passHint = passwordHintText(password, t, isSignup ? confirm : undefined)
   const score = passwordScore(password)
   const ready = canSubmit(mode, username, password, confirm, email)
 
@@ -58,14 +91,14 @@ export function AuthScreen() {
     () =>
       isSignup
         ? {
-            title: 'Begin quietly.',
-            text: 'Create an account. Your habits, plan, and books will follow you — phone, computer, anywhere.',
+            title: t('auth.signupTitle'),
+            text: t('auth.signupText'),
           }
         : {
-            title: 'Welcome back.',
-            text: 'Sign in once. The same days, the same shelf, on every device you open.',
+            title: t('auth.signinTitle'),
+            text: t('auth.signinText'),
           },
-    [isSignup],
+    [isSignup, t],
   )
 
   const onSubmit = async (event: FormEvent) => {
@@ -78,7 +111,7 @@ export function AuthScreen() {
       else await login(username, password)
       writeLastUsername(username)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Try again.')
+      setError(err instanceof Error ? translateError(err.message) : t('auth.genericError'))
     } finally {
       setBusy(false)
     }
@@ -97,18 +130,18 @@ export function AuthScreen() {
     <AuthLayout>
       <div className="auth-shell">
         <aside className="auth-story">
-          <p className="kicker">Kept on your account</p>
+          <p className="kicker">{t('auth.kicker')}</p>
           <h1>{story.title}</h1>
           <p>{story.text}</p>
           <ul className="auth-points">
-            <li>One username. Every device.</li>
-            <li>Habits, plan, and reading stay in sync.</li>
-            <li>Your data lives on this Onesh server.</li>
+            <li>{t('auth.point1')}</li>
+            <li>{t('auth.point2')}</li>
+            <li>{t('auth.point3')}</li>
           </ul>
         </aside>
 
         <section className="auth-card" aria-labelledby="auth-heading">
-          <div className="auth-tabs" role="tablist" aria-label="Account">
+          <div className="auth-tabs" role="tablist" aria-label={t('auth.tabs')}>
             <button
               type="button"
               role="tab"
@@ -116,7 +149,7 @@ export function AuthScreen() {
               className={!isSignup ? 'active' : ''}
               onClick={() => switchMode('signin')}
             >
-              Sign in
+              {t('auth.signIn')}
             </button>
             <button
               type="button"
@@ -125,32 +158,28 @@ export function AuthScreen() {
               className={isSignup ? 'active' : ''}
               onClick={() => switchMode('signup')}
             >
-              Create account
+              {t('auth.createAccount')}
             </button>
           </div>
 
-          <h2 id="auth-heading">{isSignup ? 'Create account' : 'Sign in'}</h2>
-          <p className="auth-lead">
-            {isSignup
-              ? 'Choose a username you can remember. You will use it on your phone and your computer.'
-              : 'Use the same username and password you created on any other device.'}
-          </p>
+          <h2 id="auth-heading">{isSignup ? t('auth.createAccount') : t('auth.signIn')}</h2>
+          <p className="auth-lead">{isSignup ? t('auth.signupLead') : t('auth.signinLead')}</p>
 
           {expired ? (
             <p className="auth-banner" role="status">
-              Your session ended. Sign in again to keep going.
+              {t('auth.sessionEnded')}
             </p>
           ) : null}
 
           {localNote ? (
             <p className="auth-banner auth-banner-soft" role="status">
-              The data already on this device will move into this new account.
+              {t('auth.localMove')}
             </p>
           ) : null}
 
           <form className="auth-form" onSubmit={(event) => void onSubmit(event)}>
             <div className="field wide">
-              <label htmlFor="auth-username">Username</label>
+              <label htmlFor="auth-username">{t('auth.username')}</label>
               <input
                 ref={usernameRef}
                 id="auth-username"
@@ -162,7 +191,7 @@ export function AuthScreen() {
                 maxLength={24}
                 name="username"
                 onChange={(event) => setUsername(cleanUsername(event.target.value))}
-                placeholder="your_name"
+                placeholder={t('auth.usernamePlaceholder')}
                 required
                 value={username}
                 aria-invalid={Boolean(username) && Boolean(userHint)}
@@ -172,13 +201,13 @@ export function AuthScreen() {
                 id="auth-username-hint"
                 className={`auth-hint ${username && userHint ? 'warn' : username && !userHint ? 'ok' : ''}`}
               >
-                {userHint || (username ? 'Looks good' : '3–24 letters, numbers, or _')}
+                {userHint || (username ? t('auth.looksGood') : t('auth.usernameRule'))}
               </span>
             </div>
 
             {isSignup ? (
               <div className="field wide">
-                <label htmlFor="auth-email">Email</label>
+                <label htmlFor="auth-email">{t('auth.email')}</label>
                 <input
                   id="auth-email"
                   autoComplete="email"
@@ -189,7 +218,7 @@ export function AuthScreen() {
                   maxLength={255}
                   name="email"
                   onChange={(event) => setEmail(event.target.value.trim())}
-                  placeholder="you@example.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   required
                   type="email"
                   value={email}
@@ -200,13 +229,13 @@ export function AuthScreen() {
                   id="auth-email-hint"
                   className={`auth-hint ${email && mailHint ? 'warn' : email && !mailHint ? 'ok' : ''}`}
                 >
-                  {mailHint || (email ? 'Looks good' : 'Your email address')}
+                  {mailHint || (email ? t('auth.looksGood') : t('auth.emailEmpty'))}
                 </span>
               </div>
             ) : null}
 
             <div className="field wide">
-              <label htmlFor="auth-password">Password</label>
+              <label htmlFor="auth-password">{t('auth.password')}</label>
               <div className="field-input">
                 <input
                   id="auth-password"
@@ -216,7 +245,7 @@ export function AuthScreen() {
                   name="password"
                   onChange={(event) => setPassword(event.target.value)}
                   onKeyUp={(event) => setCapsLock(event.getModifierState('CapsLock'))}
-                  placeholder="At least 8 characters"
+                  placeholder={t('auth.passwordPlaceholder')}
                   required
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -226,9 +255,9 @@ export function AuthScreen() {
                   className="field-eye"
                   type="button"
                   onClick={() => setShowPassword((value) => !value)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? t('auth.hide') : t('auth.show')}
                 </button>
               </div>
               {isSignup && password ? (
@@ -237,20 +266,22 @@ export function AuthScreen() {
                   <span className={score > 1 ? 'on' : ''} />
                   <span className={score > 2 ? 'on' : ''} />
                   <span className={score > 3 ? 'on' : ''} />
-                  <em>{passwordScoreLabel(score)}</em>
+                  <em>{strengthLabel(score, t)}</em>
                 </div>
               ) : null}
               <span
                 id="auth-password-hint"
                 className={`auth-hint ${capsLock || (password && passHint) ? 'warn' : password && !passHint ? 'ok' : ''}`}
               >
-                {capsLock ? 'Caps Lock is on' : passHint || (password ? 'Looks good' : 'At least 8 characters')}
+                {capsLock
+                  ? t('auth.capsLock')
+                  : passHint || (password ? t('auth.looksGood') : t('auth.passwordRule'))}
               </span>
             </div>
 
             {isSignup ? (
               <div className="field wide">
-                <label htmlFor="auth-confirm">Confirm password</label>
+                <label htmlFor="auth-confirm">{t('auth.confirm')}</label>
                 <input
                   id="auth-confirm"
                   autoComplete="new-password"
@@ -258,7 +289,7 @@ export function AuthScreen() {
                   minLength={8}
                   name="confirm"
                   onChange={(event) => setConfirm(event.target.value)}
-                  placeholder="Type it once more"
+                  placeholder={t('auth.confirmPlaceholder')}
                   required
                   type={showPassword ? 'text' : 'password'}
                   value={confirm}
@@ -273,7 +304,13 @@ export function AuthScreen() {
             ) : null}
 
             <button className="primary" disabled={busy || !ready} type="submit">
-              {busy ? (isSignup ? 'Creating your account…' : 'Signing you in…') : isSignup ? 'Create account' : 'Sign in'}
+              {busy
+                ? isSignup
+                  ? t('auth.creating')
+                  : t('auth.signingIn')
+                : isSignup
+                  ? t('auth.createAccount')
+                  : t('auth.signIn')}
             </button>
           </form>
         </section>

@@ -1,5 +1,5 @@
 import type { Task } from '../types'
-import { addDays, formatShort } from './dates'
+import { addDays } from './dates'
 
 export function normalizeTime(value: unknown): string | undefined {
   if (typeof value !== 'string' || !value.trim()) return undefined
@@ -54,7 +54,11 @@ export function leftoverOn(tasks: Task[], date: string): Task[] {
   return tasksOn(tasks, date).filter((task) => !task.done)
 }
 
-export function rolledLabel(task: Task): string | null {
+export function rolledLabel(
+  task: Task,
+  yesterday: string,
+  fromDate: (iso: string) => string,
+): string | null {
   if (!task.rolledFrom) return null
-  return task.rolledFrom === addDays(task.date, -1) ? 'from yesterday' : `from ${formatShort(task.rolledFrom)}`
+  return task.rolledFrom === addDays(task.date, -1) ? yesterday : fromDate(task.rolledFrom)
 }

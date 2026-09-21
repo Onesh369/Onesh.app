@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import { HABIT_COLORS, HABIT_ICONS } from '../../constants'
+import { useI18n, type MessageKey } from '../../i18n'
 import type { Habit } from '../../types'
 import { Dialog } from '../Dialog'
 import { HabitMark } from './HabitMark'
@@ -12,14 +13,18 @@ type Props = {
 }
 
 export function HabitDialog({ habit, onClose, onSave, onDelete }: Props) {
+  const { t } = useI18n()
   const [name, setName] = useState(habit?.name ?? '')
   const [color, setColor] = useState(habit?.color ?? HABIT_COLORS[0])
   const [icon, setIcon] = useState(habit?.icon ?? HABIT_ICONS[0].id)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const selectedMark = HABIT_ICONS.find((item) => item.id === icon)
+  const markLabel = selectedMark
+    ? t(`habits.icons.${selectedMark.id}` as MessageKey)
+    : t('habits.customMark')
 
   return (
-    <Dialog title={habit ? 'Edit habit' : 'New habit'} onClose={onClose}>
+    <Dialog title={habit ? t('habits.editTitle') : t('habits.newTitle')} onClose={onClose}>
       <form
         onSubmit={(event) => {
           event.preventDefault()
@@ -30,17 +35,17 @@ export function HabitDialog({ habit, onClose, onSave, onDelete }: Props) {
       >
         <div className="form-grid">
           <div className="field wide">
-            <label htmlFor="habit-name">Habit name</label>
+            <label htmlFor="habit-name">{t('habits.name')}</label>
             <input
               id="habit-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Read 20 pages, walk, stretch..."
+              placeholder={t('habits.namePlaceholder')}
               autoFocus
             />
           </div>
           <div className="field wide">
-            <label>Color</label>
+            <label>{t('habits.color')}</label>
             <div className="swatches">
               {HABIT_COLORS.map((item) => (
                 <button
@@ -55,23 +60,26 @@ export function HabitDialog({ habit, onClose, onSave, onDelete }: Props) {
             </div>
           </div>
           <div className="field wide">
-            <label>Mark</label>
+            <label>{t('habits.mark')}</label>
             <div className="icons">
-              {HABIT_ICONS.map((item) => (
+              {HABIT_ICONS.map((item) => {
+                const label = t(`habits.icons.${item.id}` as MessageKey)
+                return (
                 <button
                   key={item.id}
                   type="button"
                   className={`icon-pick ${icon === item.id ? 'on' : ''}`}
                   onClick={() => setIcon(item.id)}
-                  title={item.label}
-                  aria-label={item.label}
+                  title={label}
+                  aria-label={label}
                   aria-pressed={icon === item.id}
                 >
                   <HabitMark id={item.id} />
                 </button>
-              ))}
+                )
+              })}
             </div>
-            <p className="mark-name">{selectedMark?.label ?? 'Custom mark'}</p>
+            <p className="mark-name">{markLabel}</p>
           </div>
         </div>
         <div className="dialog-actions">
@@ -84,14 +92,14 @@ export function HabitDialog({ habit, onClose, onSave, onDelete }: Props) {
                 else setConfirmDelete(true)
               }}
             >
-              {confirmDelete ? 'Delete forever' : 'Delete'}
+              {confirmDelete ? t('common.deleteForever') : t('common.delete')}
             </button>
           ) : null}
           <button className="ghost" type="button" onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button className="primary" type="submit" disabled={!name.trim()}>
-            Save habit
+            {t('habits.save')}
           </button>
         </div>
       </form>

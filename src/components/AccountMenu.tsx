@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth'
+import { useI18n } from '../i18n'
 import { getSyncStatus, subscribeSync, type SyncStatus } from '../lib/sync'
 
-const SYNC_COPY: Record<SyncStatus, string> = {
-  idle: 'Ready on this device',
-  saving: 'Saving to your account…',
-  saved: 'Saved to your account',
-  error: 'Could not save. Will retry on the next change.',
+const SYNC_KEYS: Record<SyncStatus, 'account.syncIdle' | 'account.syncSaving' | 'account.syncSaved' | 'account.syncError'> = {
+  idle: 'account.syncIdle',
+  saving: 'account.syncSaving',
+  saved: 'account.syncSaved',
+  error: 'account.syncError',
 }
 
 export function AccountMenu() {
+  const { t } = useI18n()
   const { user, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -56,19 +58,19 @@ export function AccountMenu() {
         <span className="account-name">{user.username}</span>
       </button>
       {open ? (
-        <div className="account-menu" role="dialog" aria-label="Account">
+        <div className="account-menu" role="dialog" aria-label={t('account.menu')}>
           <div className="account-menu-head">
             <span className="account-avatar lg" aria-hidden="true">
               {user.username.slice(0, 1).toUpperCase()}
             </span>
             <div>
               <strong>{user.username}</strong>
-              <p className={sync === 'error' ? 'warn' : ''}>{SYNC_COPY[sync]}</p>
+              <p className={sync === 'error' ? 'warn' : ''}>{t(SYNC_KEYS[sync])}</p>
             </div>
           </div>
-          <p>Open onesh.online on another phone or computer and sign in with this username to see the same data.</p>
+          <p>{t('account.hint')}</p>
           <button className="ghost" disabled={busy} type="button" onClick={() => void onLogout()}>
-            {busy ? 'Signing out…' : 'Sign out'}
+            {busy ? t('account.signingOut') : t('account.signOut')}
           </button>
         </div>
       ) : null}

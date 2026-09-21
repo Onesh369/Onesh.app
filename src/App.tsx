@@ -1,36 +1,23 @@
 import { useEffect, useState } from 'react'
 import { AccountMenu } from './components/AccountMenu'
 import { HabitsPage } from './components/habits/HabitsPage'
+import { LanguageSwitch } from './components/LanguageSwitch'
 import { PlanPage } from './components/plan/PlanPage'
 import { ReadingPage } from './components/reading/ReadingPage'
 import { ThemeToggle } from './components/ThemeToggle'
+import { useI18n } from './i18n'
 import { readLastPage, writeLastPage } from './lib/session'
 import type { Page } from './types'
 
-const COPY: Record<Page, { title: string; text: string }> = {
-  habits: {
-    title: 'Habits.',
-    text: 'One tap a day. Calendar, streaks, and a quiet pulse of your week, month, and year.',
-  },
-  plan: {
-    title: 'To-Do List.',
-    text: 'A daily list. Check off what is done. Send the rest to tomorrow.',
-  },
-  reading: {
-    title: 'Reading.',
-    text: 'A shelf for what you are reading: pages, progress, genre, and the dates that matter.',
-  },
-}
-
-const PAGES: { id: Page; label: string }[] = [
-  { id: 'habits', label: 'Habits' },
-  { id: 'plan', label: 'To-Do' },
-  { id: 'reading', label: 'Reading' },
-]
+const PAGE_IDS: Page[] = ['habits', 'plan', 'reading']
 
 export default function App() {
+  const { t } = useI18n()
   const [page, setPage] = useState<Page>(() => readLastPage())
-  const copy = COPY[page]
+  const copy = {
+    title: t(`pages.${page}.title`),
+    text: t(`pages.${page}.text`),
+  }
 
   const go = (next: Page) => {
     setPage(next)
@@ -50,19 +37,20 @@ export default function App() {
             Onesh 369
           </div>
           <div className="mast-actions">
-            <nav className="nav nav-desktop" aria-label="Main">
-              {PAGES.map((item) => (
+            <nav className="nav nav-desktop" aria-label={t('nav.main')}>
+              {PAGE_IDS.map((id) => (
                 <button
-                  key={item.id}
+                  key={id}
                   type="button"
-                  className={page === item.id ? 'active' : ''}
-                  aria-current={page === item.id ? 'page' : undefined}
-                  onClick={() => go(item.id)}
+                  className={page === id ? 'active' : ''}
+                  aria-current={page === id ? 'page' : undefined}
+                  onClick={() => go(id)}
                 >
-                  {item.label}
+                  {t(`nav.${id}`)}
                 </button>
               ))}
             </nav>
+            <LanguageSwitch />
             <ThemeToggle />
             <AccountMenu />
           </div>
@@ -77,17 +65,17 @@ export default function App() {
         {page === 'habits' ? <HabitsPage /> : page === 'plan' ? <PlanPage /> : <ReadingPage />}
       </main>
 
-      <nav className="tab-bar" aria-label="Pages">
-        {PAGES.map((item) => (
+      <nav className="tab-bar" aria-label={t('nav.pages')}>
+        {PAGE_IDS.map((id) => (
           <button
-            key={item.id}
+            key={id}
             type="button"
-            className={page === item.id ? 'active' : ''}
-            aria-current={page === item.id ? 'page' : undefined}
-            onClick={() => go(item.id)}
+            className={page === id ? 'active' : ''}
+            aria-current={page === id ? 'page' : undefined}
+            onClick={() => go(id)}
           >
-            <TabIcon page={item.id} />
-            {item.label}
+            <TabIcon page={id} />
+            {t(`nav.${id}`)}
           </button>
         ))}
       </nav>

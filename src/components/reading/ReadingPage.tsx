@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { FORMATS, STATUSES } from '../../constants'
+import { GENRES } from '../../constants'
+import { useI18n, type MessageKey } from '../../i18n'
 import { bookPercent } from '../../lib/books'
 import { todayISO } from '../../lib/dates'
 import { pagesForBookOnDate } from '../../lib/reading'
@@ -13,15 +14,20 @@ function stars(rating: number): string {
   return '★'.repeat(rating) + '☆'.repeat(5 - rating)
 }
 
-function statusLabel(status: BookStatus): string {
-  return STATUSES.find((item) => item.id === status)?.label ?? status
+function genreLabel(genre: string, t: (key: MessageKey) => string): string {
+  return (GENRES as readonly string[]).includes(genre) ? t(`reading.genres.${genre}` as MessageKey) : genre
 }
 
-function formatLabel(format: Book['format']): string {
-  return FORMATS.find((item) => item.id === format)?.label ?? format
+function statusLabel(status: BookStatus, t: (key: MessageKey) => string): string {
+  return t(`reading.statuses.${status}`)
+}
+
+function formatLabel(format: Book['format'], t: (key: MessageKey) => string): string {
+  return t(`reading.formats.${format}`)
 }
 
 export function ReadingPage() {
+  const { t } = useI18n()
   const { books, readingLog, addBook, updateBook, deleteBook, logReading, finishBook } = useStore()
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Book | null>(null)
@@ -66,8 +72,8 @@ export function ReadingPage() {
         <section className="panel">
           <div className="toolbar">
             <div>
-              <div className="kicker">Library</div>
-              <h2>Books</h2>
+              <div className="kicker">{t('reading.library')}</div>
+              <h2>{t('reading.books')}</h2>
             </div>
             <div className="filters">
               <input
@@ -75,8 +81,8 @@ export function ReadingPage() {
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search title or author"
-                aria-label="Search books"
+                placeholder={t('reading.search')}
+                aria-label={t('reading.searchAria')}
               />
               {(['all', 'reading', 'read', 'stopped'] as const).map((item) => (
                 <button
@@ -85,27 +91,27 @@ export function ReadingPage() {
                   className={`chip ${filter === item ? 'active' : ''}`}
                   onClick={() => setFilter(item)}
                 >
-                  {item === 'all' ? 'All' : statusLabel(item)}
+                  {item === 'all' ? t('reading.all') : statusLabel(item, t)}
                 </button>
               ))}
               <button className="primary" type="button" onClick={() => setCreating(true)}>
-                Add book
+                {t('reading.add')}
               </button>
             </div>
           </div>
 
           {books.length === 0 ? (
             <div className="empty">
-              <h3>Your shelf is empty</h3>
-              <p>Add a title, page count, and start date. Progress and percentage fill in as you read.</p>
+              <h3>{t('reading.emptyTitle')}</h3>
+              <p>{t('reading.emptyText')}</p>
               <button className="primary" type="button" onClick={() => setCreating(true)}>
-                Add a book
+                {t('reading.addABook')}
               </button>
             </div>
           ) : visible.length === 0 ? (
             <div className="empty compact">
-              <h3>Nothing matches</h3>
-              <p>Try another filter, or clear the search.</p>
+              <h3>{t('reading.nothingTitle')}</h3>
+              <p>{t('reading.nothingText')}</p>
             </div>
           ) : (
             <div className="shelf">
@@ -114,14 +120,14 @@ export function ReadingPage() {
                 return (
                   <article key={book.id} className="book-card tap" onClick={() => setEditing(book)}>
                     <div className="book-card-top">
-                      <span className={`status ${book.status}`}>{statusLabel(book.status)}</span>
-                      <span className="format">{formatLabel(book.format)}</span>
+                      <span className={`status ${book.status}`}>{statusLabel(book.status, t)}</span>
+                      <span className="format">{formatLabel(book.format, t)}</span>
                     </div>
                     <h3>{book.title}</h3>
                     <div className="meta">
-                      {book.author || 'Unknown'}
+                      {book.author || t('common.unknown')}
                       {book.year ? ` · ${book.year}` : ''}
-                      {book.genre ? ` · ${book.genre}` : ''}
+                      {book.genre ? ` · ${genreLabel(book.genre, t)}` : ''}
                     </div>
                     <div className="progress">
                       <span style={{ width: `${percent}%` }} />
@@ -180,6 +186,7 @@ type NowProps = {
 }
 
 function NowReadingCard({ book, todayPages, onOpen, onLog, onFinish }: NowProps) {
+  const { t } = useI18n()
   const [pageInput, setPageInput] = useState('')
   const percent = bookPercent(book)
   const pagesLeft = book.pages > 0 ? Math.max(0, book.pages - book.pagesRead) : null
@@ -196,23 +203,23 @@ function NowReadingCard({ book, todayPages, onOpen, onLog, onFinish }: NowProps)
   return (
     <article className="now-card tap" onClick={onOpen}>
       <div className="now-card-head">
-        <div className="kicker">Currently reading</div>
-        {todayPages > 0 ? <span className="today-pill">+{todayPages} today</span> : null}
+        <div className="kicker">{t('reading.currently')}</div>
+        {todayPages > 0 ? <span className="today-pill">{t('reading.todayPages', { n: todayPages })}</span> : null}
       </div>
       <h2 className="now-title">{book.title}</h2>
       <div className="meta">
-        {book.author || 'Unknown author'}
-        {book.genre ? ` · ${book.genre}` : ''}
+        {book.author || t('common.unknownAuthor')}
+        {book.genre ? ` · ${genreLabel(book.genre, t)}` : ''}
       </div>
       <div className="progress" aria-label={`${percent}%`}>
         <span style={{ width: `${percent}%` }} />
       </div>
       <div className="now-meta">
         <span>
-          <b>{book.pagesRead}</b> / {book.pages || '—'} pages
+          <b>{book.pagesRead}</b> / {book.pages || '—'} {t('reading.pagesUnit')}
         </span>
         <span className="now-percent">{percent}%</span>
-        {pagesLeft != null ? <span className="meta">{pagesLeft} left</span> : null}
+        {pagesLeft != null ? <span className="meta">{t('reading.pagesLeft', { n: pagesLeft })}</span> : null}
       </div>
 
       <div className="page-logger" onClick={stop}>
@@ -229,23 +236,23 @@ function NowReadingCard({ book, todayPages, onOpen, onLog, onFinish }: NowProps)
               submitPage()
             }
           }}
-          placeholder={`On page… (was ${book.pagesRead})`}
-          aria-label="Current page reached"
+          placeholder={t('reading.pagePlaceholder', { page: book.pagesRead })}
+          aria-label={t('reading.pageAria')}
         />
         <button className="primary page-save" type="button" onClick={submitPage} disabled={!pageInput.trim()}>
-          Save page
+          {t('reading.savePage')}
         </button>
       </div>
 
       <div className="row-actions now-actions" onClick={stop}>
-        <span className="quick-label">Quick add</span>
+        <span className="quick-label">{t('reading.quickAdd')}</span>
         {[10, 20, 50].map((step) => (
           <button key={step} className="tiny" type="button" onClick={() => onLog(book.pagesRead + step)}>
             +{step}
           </button>
         ))}
         <button className="tiny finish" type="button" onClick={onFinish}>
-          Finish
+          {t('reading.finish')}
         </button>
       </div>
     </article>

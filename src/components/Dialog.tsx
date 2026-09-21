@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from 'react'
+import { useI18n } from '../i18n'
 
 type Props = {
   title: string
@@ -7,6 +8,7 @@ type Props = {
 }
 
 export function Dialog({ title, children, onClose }: Props) {
+  const { t } = useI18n()
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
@@ -31,11 +33,11 @@ export function Dialog({ title, children, onClose }: Props) {
       >
         <div className="section-head">
           <div>
-            <div className="kicker">Onesh</div>
+            <div className="kicker">{t('common.onesh')}</div>
             <h2>{title}</h2>
           </div>
           <button className="ghost" type="button" onClick={onClose}>
-            Close
+            {t('common.close')}
           </button>
         </div>
         {children}
