@@ -12,4 +12,8 @@ export function applyTheme(mode: ThemeMode) {
   document.documentElement.dataset.themeMode = mode
   const color = resolved === 'dark' ? '#0b1220' : '#f6f7f9'
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color)
+  document.querySelector<HTMLLinkElement>('link[data-theme-icon]')?.setAttribute(
+    'href',
+    resolved === 'dark' ? '/favicon-dark.svg' : '/favicon-light.svg',
+  )
 }

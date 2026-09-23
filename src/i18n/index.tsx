@@ -23,7 +23,7 @@ const API_ERROR_KEYS: Record<string, MessageKey> = {
   'Password must be at least 8 characters.': 'errors.passwordRule',
   'That username is already taken. Try another.': 'errors.usernameTaken',
   'That email is already in use. Try another or sign in.': 'errors.emailTaken',
-  'That username or password does not match.': 'errors.badCredentials',
+  'That username, email, or password does not match.': 'errors.badCredentials',
   'Cannot reach Onesh. Check your connection and try again.': 'errors.offline',
   'Something went wrong. Try again.': 'errors.generic',
   'Sign in required.': 'errors.signInRequired',

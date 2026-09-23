@@ -5,6 +5,8 @@ import { canSubmit, cleanUsername, EMAIL_PATTERN, passwordScore, USERNAME_PATTER
 import { hasLocalContent } from '../lib/storage'
 import { readGuestTheme, readLastUsername, takeSessionExpired, writeGuestTheme, writeLastUsername } from '../lib/session'
 import { LanguageSwitch } from './LanguageSwitch'
+import { SiteFooter } from './SiteFooter'
+import { Logo } from './Logo'
 import { ThemeSwitch } from './ThemeToggle'
 import type { ThemeMode } from '../types'
 
@@ -15,7 +17,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
     <div className="auth-app">
       <header className="auth-top">
         <div className="brand-mark">
-          <span className="brand-dot" />
+          <Logo size={30} />
           Onesh 369
         </div>
         <div className="mast-actions">
@@ -30,6 +32,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
       {children}
+      <SiteFooter />
     </div>
   )
 }
@@ -39,6 +42,13 @@ function usernameHintText(value: string, t: Translate) {
   if (value.length < 3) return value.length === 2 ? t('auth.usernameShortOne') : t('auth.usernameShort', { n: 3 - value.length })
   if (!USERNAME_PATTERN.test(value)) return t('auth.usernameInvalid')
   return ''
+}
+
+function identifierHintText(value: string, t: Translate) {
+  const id = value.trim()
+  if (!id) return t('auth.signinIdentifierHint')
+  if (id.includes('@')) return EMAIL_PATTERN.test(id) ? '' : t('auth.emailInvalid')
+  return usernameHintText(id, t)
 }
 
 function emailHintText(value: string, t: Translate) {
@@ -77,7 +87,8 @@ export function AuthScreen() {
   const usernameRef = useRef<HTMLInputElement>(null)
   const isSignup = mode === 'signup'
   const localNote = isSignup && hasLocalContent()
-  const userHint = usernameHintText(username, t)
+  const identifier = username.trim()
+  const userHint = isSignup ? usernameHintText(username, t) : identifierHintText(username, t)
   const mailHint = emailHintText(email, t)
   const passHint = passwordHintText(password, t, isSignup ? confirm : undefined)
   const score = passwordScore(password)
@@ -108,8 +119,8 @@ export function AuthScreen() {
     setBusy(true)
     try {
       if (isSignup) await signup(username, email, password)
-      else await login(username, password)
-      writeLastUsername(username)
+      else await login(identifier, password)
+      writeLastUsername(isSignup ? username : identifier)
     } catch (err) {
       setError(err instanceof Error ? translateError(err.message) : t('auth.genericError'))
     } finally {
@@ -119,6 +130,7 @@ export function AuthScreen() {
 
   const switchMode = (next: 'signin' | 'signup') => {
     setMode(next)
+    if (next === 'signup') setUsername((value) => cleanUsername(value))
     setEmail('')
     setPassword('')
     setConfirm('')
@@ -130,14 +142,8 @@ export function AuthScreen() {
     <AuthLayout>
       <div className="auth-shell">
         <aside className="auth-story">
-          <p className="kicker">{t('auth.kicker')}</p>
           <h1>{story.title}</h1>
           <p>{story.text}</p>
-          <ul className="auth-points">
-            <li>{t('auth.point1')}</li>
-            <li>{t('auth.point2')}</li>
-            <li>{t('auth.point3')}</li>
-          </ul>
         </aside>
 
         <section className="auth-card" aria-labelledby="auth-heading">
@@ -179,7 +185,7 @@ export function AuthScreen() {
 
           <form className="auth-form" onSubmit={(event) => void onSubmit(event)}>
             <div className="field wide">
-              <label htmlFor="auth-username">{t('auth.username')}</label>
+              <label htmlFor="auth-username">{isSignup ? t('auth.username') : t('auth.usernameOrEmail')}</label>
               <input
                 ref={usernameRef}
                 id="auth-username"
@@ -188,20 +194,22 @@ export function AuthScreen() {
                 autoCorrect="off"
                 spellCheck={false}
                 enterKeyHint="next"
-                maxLength={24}
+                maxLength={isSignup ? 24 : 255}
                 name="username"
-                onChange={(event) => setUsername(cleanUsername(event.target.value))}
-                placeholder={t('auth.usernamePlaceholder')}
+                onChange={(event) => setUsername(isSignup ? cleanUsername(event.target.value) : event.target.value)}
+                placeholder={isSignup ? t('auth.usernamePlaceholder') : t('auth.signinIdentifierPlaceholder')}
                 required
                 value={username}
-                aria-invalid={Boolean(username) && Boolean(userHint)}
+                aria-invalid={Boolean(identifier) && Boolean(userHint)}
                 aria-describedby="auth-username-hint"
               />
               <span
                 id="auth-username-hint"
-                className={`auth-hint ${username && userHint ? 'warn' : username && !userHint ? 'ok' : ''}`}
+                className={`auth-hint ${identifier && userHint ? 'warn' : identifier && !userHint ? 'ok' : ''}`}
               >
-                {userHint || (username ? t('auth.looksGood') : t('auth.usernameRule'))}
+                {isSignup
+                  ? userHint || (username ? t('auth.looksGood') : t('auth.usernameRule'))
+                  : userHint || (identifier ? t('auth.looksGood') : t('auth.signinIdentifierHint'))}
               </span>
             </div>
 
@@ -314,6 +322,21 @@ export function AuthScreen() {
             </button>
           </form>
         </section>
+
+        <ul className="auth-services" aria-label={t('auth.services')}>
+          <li>
+            <h2>{t('auth.toolHabitsTitle')}</h2>
+            <p>{t('auth.toolHabitsText')}</p>
+          </li>
+          <li>
+            <h2>{t('auth.toolPlanTitle')}</h2>
+            <p>{t('auth.toolPlanText')}</p>
+          </li>
+          <li>
+            <h2>{t('auth.toolReadingTitle')}</h2>
+            <p>{t('auth.toolReadingText')}</p>
+          </li>
+        </ul>
       </div>
     </AuthLayout>
   )

@@ -40,13 +40,19 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'favicon.svg', 'apple-touch-icon-180x180.png', 'icons.svg'],
+      includeAssets: [
+        'favicon.svg',
+        'favicon-light.svg',
+        'favicon-dark.svg',
+        'favicon.ico',
+        'apple-touch-icon-180x180.png',
+      ],
       manifest: {
         name: 'Onesh',
         short_name: 'Onesh',
         description: 'Habits, daily plan, and a reading shelf. Sign in to sync across devices.',
-        theme_color: '#efe6d6',
-        background_color: '#efe6d6',
+        theme_color: '#f6f7f9',
+        background_color: '#f6f7f9',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',

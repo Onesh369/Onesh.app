@@ -1,66 +1,75 @@
+import { useEffect, useRef, useState } from 'react'
 import { LOCALES, useI18n, type Locale } from '../i18n'
-
-const NEXT: Record<Locale, Locale> = {
-  en: 'fr',
-  fr: 'ar',
-  ar: 'en',
-}
-
-const SHORT: Record<Locale, string> = {
-  en: 'EN',
-  fr: 'FR',
-  ar: 'ع',
-}
 
 export function LanguageSwitch() {
   const { locale, setLocale, t } = useI18n()
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onPointer = (event: PointerEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('pointerdown', onPointer)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('pointerdown', onPointer)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const choose = (id: Locale) => {
+    setLocale(id)
+    setOpen(false)
+  }
 
   return (
-    <>
-      <div className="lang-switch" role="group" aria-label={t('lang.group')}>
-        {LOCALES.map((id) => (
-          <button
-            key={id}
-            type="button"
-            className={`lang-btn ${locale === id ? 'active' : ''}`}
-            onClick={() => setLocale(id)}
-            aria-pressed={locale === id}
-            title={t(`lang.${id}`)}
-          >
-            {SHORT[id]}
-          </button>
-        ))}
-      </div>
+    <div className="lang-picker" ref={wrapRef}>
       <button
-        className="icon-btn lang-cycle"
+        className="lang-picker-btn"
         type="button"
-        onClick={() => setLocale(NEXT[locale])}
+        aria-expanded={open}
+        aria-haspopup="listbox"
         aria-label={t('lang.switch', { label: t(`lang.${locale}`) })}
-        title={t(`lang.${locale}`)}
+        onClick={() => setOpen((value) => !value)}
       >
-        <LangGlyph />
+        {t(`lang.${locale}`)}
+        <Chevron open={open} />
       </button>
-    </>
+      {open ? (
+        <ul className="lang-picker-menu" role="listbox" aria-label={t('lang.group')}>
+          {LOCALES.map((id) => (
+            <li key={id}>
+              <button type="button" role="option" aria-selected={locale === id} onClick={() => choose(id)}>
+                {t(`lang.${id}`)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   )
 }
 
-function LangGlyph() {
+function Chevron({ open }: { open: boolean }) {
   return (
     <svg
+      className={open ? 'open' : ''}
       viewBox="0 0 24 24"
-      width="18"
-      height="18"
+      width="14"
+      height="14"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M3 12h18" />
-      <path d="M12 3a14 14 0 0 1 0 18" />
-      <path d="M12 3a14 14 0 0 0 0 18" />
+      <path d="M6 9l6 6 6-6" />
     </svg>
   )
 }

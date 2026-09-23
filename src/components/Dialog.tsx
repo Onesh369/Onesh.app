@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect } from 'react'
 import { useI18n } from '../i18n'
+import { Logo } from './Logo'
 
 type Props = {
   title: string
@@ -33,7 +34,10 @@ export function Dialog({ title, children, onClose }: Props) {
       >
         <div className="section-head">
           <div>
-            <div className="kicker">{t('common.onesh')}</div>
+            <div className="kicker with-logo">
+              <Logo size={18} />
+              {t('common.onesh')}
+            </div>
             <h2>{title}</h2>
           </div>
           <button className="ghost" type="button" onClick={onClose}>

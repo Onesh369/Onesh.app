@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { AccountMenu } from './components/AccountMenu'
+import { Logo } from './components/Logo'
 import { HabitsPage } from './components/habits/HabitsPage'
 import { LanguageSwitch } from './components/LanguageSwitch'
 import { PlanPage } from './components/plan/PlanPage'
 import { ReadingPage } from './components/reading/ReadingPage'
+import { SiteFooter } from './components/SiteFooter'
 import { ThemeToggle } from './components/ThemeToggle'
 import { useI18n } from './i18n'
 import { readLastPage, writeLastPage } from './lib/session'
@@ -33,7 +35,7 @@ export default function App() {
       <header className="masthead">
         <div className="mast-top">
           <div className="brand-mark">
-            <span className="brand-dot" />
+            <Logo size={30} />
             Onesh 369
           </div>
           <div className="mast-actions">
@@ -64,6 +66,8 @@ export default function App() {
       <main className="page-in" key={page}>
         {page === 'habits' ? <HabitsPage /> : page === 'plan' ? <PlanPage /> : <ReadingPage />}
       </main>
+
+      <SiteFooter />
 
       <nav className="tab-bar" aria-label={t('nav.pages')}>
         {PAGE_IDS.map((id) => (

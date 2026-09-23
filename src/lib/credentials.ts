@@ -41,9 +41,15 @@ export function passwordScoreLabel(score: number) {
   return 'Solid'
 }
 
+export function identifierOk(value: string) {
+  const id = value.trim()
+  return USERNAME_PATTERN.test(id) || EMAIL_PATTERN.test(id)
+}
+
 export function canSubmit(mode: 'signin' | 'signup', username: string, password: string, confirm: string, email?: string) {
-  if (!USERNAME_PATTERN.test(username) || password.length < 8) return false
-  if (mode === 'signup' && password !== confirm) return false
-  if (mode === 'signup' && (!email || !EMAIL_PATTERN.test(email))) return false
+  if (password.length < 8) return false
+  if (mode === 'signin') return identifierOk(username)
+  if (!USERNAME_PATTERN.test(username) || password !== confirm) return false
+  if (!email || !EMAIL_PATTERN.test(email)) return false
   return true
 }

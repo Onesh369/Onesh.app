@@ -225,7 +225,7 @@ app.post('/api/login', async (c) => {
   }
 
   const ok = await bcrypt.compare(password, user?.password_hash ?? dummyHash)
-  if (!user || !ok) return c.json({ error: 'That username or password does not match.' }, 401)
+  if (!user || !ok) return c.json({ error: 'That username, email, or password does not match.' }, 401)
   setSession(c, signToken({ sub: user.id, username: user.username }, await secret()))
   return c.json({ id: user.id, username: user.username })
 })
